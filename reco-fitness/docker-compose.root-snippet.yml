@@ -1,0 +1,18 @@
+# ============================================================
+# Extrait a ajouter dans le docker-compose.yml racine du projet
+# Rejoindre le reseau existant : mspr_data_network
+# ============================================================
+
+  reco-fitness:
+    build: ./reco-fitness
+    container_name: mspr-reco-fitness
+    ports:
+      - "8002:8000"
+    env_file:
+      - ./reco-fitness/.env
+    depends_on:
+      - postgres
+      - mongo
+    networks:
+      - mspr_data_network
+    restart: unless-stopped

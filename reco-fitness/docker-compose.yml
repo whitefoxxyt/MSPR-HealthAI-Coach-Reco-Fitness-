@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  reco-fitness:
+    build: .
+    container_name: mspr-reco-fitness
+    ports:
+      - "8002:8000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    networks:
+      - mspr_data_network
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: mspr-reco-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-reco_fitness}
+    ports:
+      - "5433:5432"
+    volumes:
+      - reco_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mspr_data_network
+
+  mongo:
+    image: mongo:7-jammy
+    container_name: mspr-reco-mongo
+    ports:
+      - "27018:27017"
+    volumes:
+      - reco_mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mspr_data_network
+
+volumes:
+  reco_postgres_data:
+  reco_mongo_data:
+
+networks:
+  mspr_data_network:
+    external: true
