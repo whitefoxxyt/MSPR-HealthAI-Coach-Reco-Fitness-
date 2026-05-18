@@ -1,4 +1,4 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.config import settings
 
 _client: AsyncIOMotorClient | None = None
@@ -11,9 +11,8 @@ def get_mongo_client() -> AsyncIOMotorClient:
     return _client
 
 
-def get_mongo_db():
-    client = get_mongo_client()
-    return client[settings.MONGO_DATABASE]
+def get_mongo_db() -> AsyncIOMotorDatabase:
+    return get_mongo_client()[settings.MONGO_DATABASE]
 
 
 async def check_mongo() -> bool:
@@ -25,7 +24,7 @@ async def check_mongo() -> bool:
         return False
 
 
-async def close_mongo():
+async def close_mongo() -> None:
     global _client
     if _client is not None:
         _client.close()

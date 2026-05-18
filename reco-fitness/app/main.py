@@ -1,7 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.routers.health import router as health_router
 from app.db.mongo import close_mongo
+
+API_V1_PREFIX = "/api/v1"
 
 
 @asynccontextmanager
@@ -20,14 +21,10 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-# Enregistrement du router health sans prefixe
+# Router health enregistre sans prefixe
+from app.routers.health import router as health_router  # noqa: E402
 app.include_router(health_router)
 
-# Routers metier enregistres sous /api/v1
-API_V1_PREFIX = "/api/v1"
-
-# Exemple d'inclusion conditionnelle pour les futurs routers :
-# from app.routers import recommendations, exercises, nutrition
-# app.include_router(recommendations.router, prefix=API_V1_PREFIX)
-# app.include_router(exercises.router, prefix=API_V1_PREFIX)
-# app.include_router(nutrition.router, prefix=API_V1_PREFIX)
+# Routers metier sous /api/v1
+from app.routers.fitness_profile import router as fitness_profile_router  # noqa: E402
+app.include_router(fitness_profile_router, prefix=API_V1_PREFIX)
