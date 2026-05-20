@@ -66,7 +66,7 @@ class TestGetRecentReturnsMostRecent:
         assert result is not None
         assert isinstance(result, Biometric)
         assert result.user_id == user_id
-        assert result.weight_kg == 72.5
+        assert result.weight_kg == pytest.approx(72.5)
         assert result.avg_heart_rate_bpm == 68
         assert result.experience_level == "advanced"
         assert result.measured_at == datetime(2026, 4, 28, 8, 0, tzinfo=timezone.utc)
@@ -119,4 +119,4 @@ class TestGetRecentDaysWindow:
         result = get_recent(user_id=1, db=db_session, days=30)
 
         assert result is not None
-        assert result.weight_kg == 78.0
+        assert result.weight_kg == pytest.approx(78.0)

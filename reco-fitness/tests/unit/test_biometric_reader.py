@@ -22,7 +22,7 @@ class TestBiometricModel:
         )
 
         assert bio.user_id == 42
-        assert bio.weight_kg == 72.5
+        assert bio.weight_kg == pytest.approx(72.5)
         assert bio.avg_heart_rate_bpm == 68
         assert bio.experience_level == "intermediate"
         assert bio.measured_at == datetime(2026, 5, 1, 9, 0, tzinfo=timezone.utc)
