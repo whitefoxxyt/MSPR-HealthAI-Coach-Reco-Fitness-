@@ -223,6 +223,9 @@ class TestPostRecommendationsPremium:
         assert body["duration_weeks"] == 4
         assert len(body["weeks"]) == 4
 
+
+@pytest.mark.integration
+class TestPostRecommendationsPremiumPlus:
     def test_premium_plus_high_avg_heart_rate_reduces_sessions(self, client, mock_auth_tier):
         from datetime import datetime, timezone
 

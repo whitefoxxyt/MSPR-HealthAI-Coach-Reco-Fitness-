@@ -140,7 +140,6 @@ async def post_recommendation(
         "duration_weeks": program.duration_weeks,
         "scoring_strategy": program.scoring_strategy,
         "tier_at_generation": entitlements.tier,
-        "intensity_modifier": program.intensity_modifier,
         "weeks": weeks_serialized,
         "created_at": now,
     }
