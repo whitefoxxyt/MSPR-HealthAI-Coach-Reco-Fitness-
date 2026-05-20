@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 from app.db.mongo import close_mongo
 from app.routers.fitness_profile import router as fitness_profile_router
 from app.routers.health import router as health_router
+from app.routers.program_history import router as program_history_router
 from app.routers.programs import router as programs_router
 from app.routers.recommendations import limiter
 from app.routers.recommendations import router as recommendations_router
@@ -37,3 +38,4 @@ app.include_router(health_router)
 app.include_router(fitness_profile_router, prefix=API_V1_PREFIX)
 app.include_router(recommendations_router, prefix=API_V1_PREFIX)
 app.include_router(programs_router, prefix=API_V1_PREFIX)
+app.include_router(program_history_router, prefix=API_V1_PREFIX)
