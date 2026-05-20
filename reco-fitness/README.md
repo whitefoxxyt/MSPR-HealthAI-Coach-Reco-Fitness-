@@ -27,6 +27,22 @@ cp .env.example .env
 pip install -r requirements-dev.txt
 ```
 
+### Entrainer le modele de scoring (ML)
+
+```bash
+# 1. Generer le dataset synthetique a partir du catalogue PostgreSQL
+python scripts/generate_training_data.py
+
+# 2. Entrainer le RandomForestRegressor et exporter le modele + le rapport de metriques
+python scripts/train_scoring_model.py
+```
+
+Artefacts produits :
+- `app/data/scoring_model.pkl` — bundle `{model, vocab, feature_columns}` charge par `app/services/scoring_ml.py`
+- `data/training/training_report.json` — metriques validation (MSE, R2) et test (precision, rappel, F1 avec seuil `score > 0.5`)
+
+Cible PRD : F1 > 0.7 sur le jeu de test. Hyperparametres : `n_estimators=200, max_depth=15, random_state=42`, split 60/20/20.
+
 ### Lancer les tests
 
 ```bash

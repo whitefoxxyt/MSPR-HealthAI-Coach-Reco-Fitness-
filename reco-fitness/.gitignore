@@ -13,3 +13,6 @@ dist/
 
 # Datasets generes (regenerables via scripts/generate_training_data.py)
 data/training/
+
+# Modele ML entraine (regenerable via scripts/train_scoring_model.py)
+app/data/scoring_model.pkl
