@@ -52,6 +52,19 @@ PgSession = Annotated[Session, Depends(get_pg_db)]
 COLLECTION = "workout_programs"
 
 
+def _read_biometrics(user_id: str, pg_session: Session) -> "biometric_reader.Biometric | None":
+    """
+    Convertit le user_id JWT (str) en int pour la cle PG. Si non numerique
+    (UUID, slug...), retourne None : on degrade vers le comportement premium
+    nominal sans bloquer la requete.
+    """
+    try:
+        user_id_int = int(user_id)
+    except ValueError:
+        return None
+    return biometric_reader.get_recent(user_id_int, pg_session)
+
+
 def _exercise_to_schema(ex: Exercise) -> ExerciseInProgram:
     return ExerciseInProgram(
         id=ex.id,
@@ -103,7 +116,7 @@ async def post_recommendation(
         elif entitlements.tier == "premium":
             program = orchestrator.recommend_premium(profile, history, catalog)
         else:  # premium_plus -- _parse_entitlements garantit l'un des 3 tiers
-            biometrics = await biometric_reader.get_recent_biometrics(current_user.user_id, db)
+            biometrics = _read_biometrics(current_user.user_id, pg_session)
             program = orchestrator.recommend_premium_plus(
                 profile, history, catalog, biometrics
             )
