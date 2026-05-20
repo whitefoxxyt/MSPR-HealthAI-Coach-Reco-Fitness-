@@ -113,6 +113,19 @@ class TestRecommendFree:
         )
 
 
+class TestEmptyCatalogAfterFiltering:
+    def test_raises_empty_catalog_error_when_no_exercise_passes_filters(self):
+        catalog = [
+            _make_exercise(i, name=f"bar-{i}", equipment=["barbell"])
+            for i in range(1, 11)
+        ]
+        # User n'a aucun equipement et veut eviter le seul muscle cible -> tout filtre.
+        profile = _profile(equipment=[], limitations=["quadriceps"])
+
+        with pytest.raises(orchestrator.EmptyCatalogError):
+            orchestrator.recommend_free(profile, history=[], catalog=catalog)
+
+
 class TestRecommendPremium:
     @pytest.fixture(autouse=True)
     def _stub_ml(self, monkeypatch):

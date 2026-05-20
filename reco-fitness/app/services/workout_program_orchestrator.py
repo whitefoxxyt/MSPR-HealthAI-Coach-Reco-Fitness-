@@ -47,6 +47,10 @@ def _shape_for(goal: HealthGoalFitness) -> tuple[int, int, int]:
     return _GOAL_SHAPE[goal.value]
 
 
+class EmptyCatalogError(ValueError):
+    """Aucun exercice ne passe les filtres durs (limitations / equipement)."""
+
+
 def _structure_program(
     ranked: list[Exercise],
     duration_weeks: int,
@@ -55,6 +59,10 @@ def _structure_program(
     strategy: ScoringStrategy,
 ) -> WorkoutProgram:
     """Decoupe la liste d'exercices ranges en semaines de seances, en cyclant si necessaire."""
+    if not ranked:
+        raise EmptyCatalogError(
+            "Aucun exercice eligible apres filtrage : limitations ou equipement trop restrictifs."
+        )
     needed_per_week = sessions_per_week * exercises_per_session
     weeks: list[list[list[Exercise]]] = []
     for w in range(duration_weeks):
