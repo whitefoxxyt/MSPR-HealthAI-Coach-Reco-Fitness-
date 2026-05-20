@@ -17,7 +17,7 @@ async def record_feedback(
     exercise_id: int | None,
     db: AsyncIOMotorDatabase,
 ) -> dict:
-    """Insere un feedback dans recommendation_history et retourne le document insere."""
+    """Upsert le feedback sur (user_id, program_id, exercise_id) et retourne le document final."""
     program = await db[PROGRAMS_COLLECTION].find_one(
         {"program_id": program_id}, {"user_id": 1}
     )
@@ -32,14 +32,24 @@ async def record_feedback(
             detail="Ce programme n'appartient pas a cet utilisateur.",
         )
 
-    document = {
+    # PUT idempotent : un feedback par (user_id, program_id, exercise_id).
+    # exercise_id=None designe le feedback program-level, distinct des feedbacks par exercice.
+    feedback_key = {
         "user_id": user_id,
         "program_id": program_id,
-        "feedback_score": score,
-        "completed": completed,
-        "comment": comment,
         "exercise_id": exercise_id,
-        "created_at": datetime.now(timezone.utc),
     }
-    await db[HISTORY_COLLECTION].insert_one(document)
-    return document
+    now = datetime.now(timezone.utc)
+    await db[HISTORY_COLLECTION].update_one(
+        feedback_key,
+        {
+            "$set": {
+                "feedback_score": score,
+                "completed": completed,
+                "comment": comment,
+            },
+            "$setOnInsert": {**feedback_key, "created_at": now},
+        },
+        upsert=True,
+    )
+    return await db[HISTORY_COLLECTION].find_one(feedback_key, {"_id": 0})

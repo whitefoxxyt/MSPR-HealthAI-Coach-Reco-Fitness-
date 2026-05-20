@@ -29,7 +29,6 @@ PROGRAM_DOC = {
     "duration_weeks": 4,
     "scoring_strategy": "hybrid_rank_fusion",
     "tier_at_generation": "premium",
-    "intensity_modifier": 1.0,
     "weeks": [],
     "created_at": datetime.now(timezone.utc),
 }
@@ -189,3 +188,32 @@ class TestPutFeedback:
 
         assert response.status_code in (401, 403)
         assert sync_db["recommendation_history"].count_documents({"program_id": program_id}) == 0
+
+    def test_put_is_idempotent_upserts_on_user_program_exercise(self, client):
+        c, sync_db = client
+        user_id = "u-upsert-7"
+        program_id = "prog-upsert-7"
+        _seed_program(sync_db, program_id, user_id)
+
+        first = c.put(
+            f"/api/v1/programs/{program_id}/feedback",
+            json={"score": 3, "completed": False, "comment": "premier"},
+            headers=_auth(user_id),
+        )
+        assert first.status_code == 200, first.text
+        first_created_at = first.json()["created_at"]
+
+        second = c.put(
+            f"/api/v1/programs/{program_id}/feedback",
+            json={"score": 5, "completed": True, "comment": "mis a jour"},
+            headers=_auth(user_id),
+        )
+        assert second.status_code == 200, second.text
+
+        docs = list(sync_db["recommendation_history"].find({"user_id": user_id}))
+        assert len(docs) == 1, "PUT idempotent : un seul doc par (user, program, exercise)"
+        assert docs[0]["feedback_score"] == 5
+        assert docs[0]["completed"] is True
+        assert docs[0]["comment"] == "mis a jour"
+        # created_at preserve la valeur du premier insert
+        assert second.json()["created_at"] == first_created_at

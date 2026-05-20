@@ -33,7 +33,6 @@ def _make_program_doc(user_id: str, created_at: datetime | None = None) -> dict:
         "duration_weeks": 2,
         "scoring_strategy": "rule_based",
         "tier_at_generation": "free",
-        "intensity_modifier": 1.0,
         "weeks": [],
         "created_at": created_at or datetime.now(timezone.utc),
     }

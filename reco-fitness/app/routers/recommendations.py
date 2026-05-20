@@ -52,7 +52,9 @@ PgSession = Annotated[Session, Depends(get_pg_db)]
 COLLECTION = "workout_programs"
 
 
-def _read_biometrics(user_id: str, pg_session: Session) -> "biometric_reader.Biometric | None":
+def _read_biometrics(
+    user_id: str, pg_session: Session
+) -> biometric_reader.Biometric | None:
     """
     Convertit le user_id JWT (str) en int pour la cle PG. Si non numerique
     (UUID, slug...), retourne None : on degrade vers le comportement premium
