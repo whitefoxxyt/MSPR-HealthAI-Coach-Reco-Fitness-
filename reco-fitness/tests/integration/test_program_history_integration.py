@@ -175,12 +175,11 @@ class TestPaginationShape:
         user_id = "u-paginate"
         base = datetime(2026, 5, 1, 12, 0, 0, tzinfo=timezone.utc)
         # 7 documents, espaces d'un jour, du plus ancien au plus recent.
-        sync_db["workout_programs"].insert_many(
-            [
-                _make_program_doc(user_id, created_at=base + timedelta(days=i))
-                for i in range(7)
-            ]
-        )
+        docs = [
+            _make_program_doc(user_id, created_at=base + timedelta(days=i))
+            for i in range(7)
+        ]
+        sync_db["workout_programs"].insert_many(docs)
 
         response = c.get(
             "/api/v1/programs/me",
@@ -194,19 +193,32 @@ class TestPaginationShape:
         assert body["limit"] == 3
         assert body["offset"] == 2
         assert len(body["items"]) == 3
+        # Tri DESC sur created_at -> page (offset=2, limit=3) doit etre [day4, day3, day2].
+        expected = [base + timedelta(days=d) for d in (4, 3, 2)]
+        actual = [
+            datetime.fromisoformat(item["created_at"].replace("Z", "+00:00"))
+            for item in body["items"]
+        ]
+        assert actual == expected
 
 
 @pytest.mark.integration
 class TestPaginationDefaults:
-    def test_default_limit_is_20_and_caps_items(self, client):
+    @pytest.mark.parametrize(
+        "path,collection",
+        [
+            ("/api/v1/programs/me", "workout_programs"),
+            ("/api/v1/feedback/me", "recommendation_history"),
+        ],
+    )
+    def test_default_limit_is_20_and_caps_items(self, client, path, collection):
         c, sync_db = client
-        user_id = "u-default-limit"
+        user_id = f"u-default-limit-{collection}"
         # 25 documents -- doit etre tronque a 20 par defaut.
-        sync_db["workout_programs"].insert_many(
-            [_make_program_doc(user_id) for _ in range(25)]
-        )
+        factory = _make_program_doc if collection == "workout_programs" else _make_feedback_doc
+        sync_db[collection].insert_many([factory(user_id) for _ in range(25)])
 
-        response = c.get("/api/v1/programs/me", headers=_auth(user_id))
+        response = c.get(path, headers=_auth(user_id))
 
         assert response.status_code == 200, response.text
         body = response.json()
@@ -234,3 +246,14 @@ class TestPaginationValidation:
         c, _ = client
         response = c.get(path, headers=_auth("u-validate"), params=params)
         assert response.status_code == 422, response.text
+
+
+@pytest.mark.integration
+class TestAuthentication:
+    @pytest.mark.parametrize(
+        "path", ["/api/v1/programs/me", "/api/v1/feedback/me"]
+    )
+    def test_unauthenticated_request_returns_401_or_403(self, client, path):
+        c, _ = client
+        response = c.get(path)
+        assert response.status_code in (401, 403), response.text

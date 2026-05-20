@@ -31,6 +31,10 @@ async def list_my_programs(
     limit: LimitParam = 20,
     offset: OffsetParam = 0,
 ) -> PaginatedProgramsResponse:
+    """
+    Retourne la page de programmes generes par l'utilisateur authentifie,
+    tri descendant sur created_at. Le user_id est toujours extrait du JWT.
+    """
     return await svc.list_programs(current_user.user_id, limit, offset, db)
 
 
@@ -45,4 +49,8 @@ async def list_my_feedback(
     limit: LimitParam = 20,
     offset: OffsetParam = 0,
 ) -> PaginatedFeedbackResponse:
+    """
+    Retourne la page de feedbacks envoyes par l'utilisateur authentifie,
+    tri descendant sur created_at. Le user_id est toujours extrait du JWT.
+    """
     return await svc.list_feedback(current_user.user_id, limit, offset, db)
