@@ -59,17 +59,17 @@ def reset_cache():
 # ------------------------------------------------------------
 
 def _insert_exercise(db: Session, **kwargs) -> ExerciseORM:
-    defaults = dict(
-        name="Burpee",
-        target_muscles=["full_body"],
-        equipment=["none"],
-        difficulty="intermediate",
-        category="cardio",
-        description="Un burpee complet.",
-        instructions=["Debout", "Au sol", "Pompe", "Saut"],
-        duration_seconds=None,
-        calories_per_minute=10,
-    )
+    defaults = {
+        "name": "Burpee",
+        "target_muscles": ["full_body"],
+        "equipment": ["none"],
+        "difficulty": "intermediate",
+        "category": "cardio",
+        "description": "Un burpee complet.",
+        "instructions": ["Debout", "Au sol", "Pompe", "Saut"],
+        "duration_seconds": None,
+        "calories_per_minute": 10,
+    }
     defaults.update(kwargs)
     row = ExerciseORM(**defaults)
     db.add(row)

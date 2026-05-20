@@ -7,17 +7,17 @@ import pytest
 
 
 @pytest.mark.slow
-def test_slow_marker_is_registered():
+def test_slow_marker_is_registered(request):
     """
-    Verifie que le marker slow est bien configure.
-    Ce test sert de placeholder -- ajouter ici les vrais tests reseau.
+    Verifie que le marker slow est bien configure et applique a ce test.
+    Sert de placeholder -- ajouter ici les vrais tests reseau.
     """
-    assert True
+    assert request.node.get_closest_marker("slow") is not None
 
 
 @pytest.mark.slow
-async def test_slow_async_placeholder():
+async def test_slow_async_placeholder(request):
     """Placeholder async pour les futurs tests d'appels externes reels."""
     import asyncio
     await asyncio.sleep(0)
-    assert True
+    assert request.node.get_closest_marker("slow") is not None

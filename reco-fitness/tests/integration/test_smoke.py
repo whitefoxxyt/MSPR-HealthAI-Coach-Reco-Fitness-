@@ -16,7 +16,7 @@ def test_mongo_container_is_reachable(mongo_container):
     from pymongo import MongoClient
     client = MongoClient(mongo_container["url"])
     result = client.admin.command("ping")
-    assert result.get("ok") == 1.0
+    assert result.get("ok") == pytest.approx(1.0)
     client.close()
 
 

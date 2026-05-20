@@ -24,7 +24,7 @@ async def check_mongo() -> bool:
         return False
 
 
-async def close_mongo() -> None:
+def close_mongo() -> None:
     global _client
     if _client is not None:
         _client.close()

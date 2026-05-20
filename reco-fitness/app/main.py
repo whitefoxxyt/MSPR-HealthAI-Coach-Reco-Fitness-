@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from app.db.mongo import close_mongo
+from app.routers.health import router as health_router
+from app.routers.fitness_profile import router as fitness_profile_router
 
 API_V1_PREFIX = "/api/v1"
 
@@ -8,7 +10,7 @@ API_V1_PREFIX = "/api/v1"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     yield
-    await close_mongo()
+    close_mongo()
 
 
 app = FastAPI(
@@ -21,10 +23,5 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-# Router health enregistre sans prefixe
-from app.routers.health import router as health_router  # noqa: E402
 app.include_router(health_router)
-
-# Routers metier sous /api/v1
-from app.routers.fitness_profile import router as fitness_profile_router  # noqa: E402
 app.include_router(fitness_profile_router, prefix=API_V1_PREFIX)

@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.services.jwt_decoder import decode, UserIdentity
 from app.db.mongo import get_mongo_db

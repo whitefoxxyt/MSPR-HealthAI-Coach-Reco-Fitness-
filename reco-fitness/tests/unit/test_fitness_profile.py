@@ -17,13 +17,13 @@ from app.services import fitness_profile_service as svc
 
 
 def _make_payload(**kwargs) -> FitnessProfileRequest:
-    defaults = dict(
-        health_goal_fitness=HealthGoalFitness.fat_loss,
-        experience_level=ExperienceLevel.beginner,
-        equipment=["dumbbells"],
-        limitations=[],
-        preferences=SessionPreferences(duration_min_per_session=45, sessions_per_week=3),
-    )
+    defaults = {
+        "health_goal_fitness": HealthGoalFitness.fat_loss,
+        "experience_level": ExperienceLevel.beginner,
+        "equipment": ["dumbbells"],
+        "limitations": [],
+        "preferences": SessionPreferences(duration_min_per_session=45, sessions_per_week=3),
+    }
     defaults.update(kwargs)
     return FitnessProfileRequest(**defaults)
 
@@ -94,7 +94,7 @@ class TestUpsertProfile:
 
     @pytest.mark.asyncio
     async def test_upsert_sets_updated_at(self):
-        db, col = _mock_db()
+        db, _ = _mock_db()
         result = await svc.upsert_profile("u-1", _make_payload(), db)
         assert isinstance(result.updated_at, datetime)
 
