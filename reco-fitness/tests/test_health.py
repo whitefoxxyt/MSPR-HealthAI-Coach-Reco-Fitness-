@@ -7,7 +7,7 @@ client = TestClient(app)
 
 def test_health_returns_200():
     with (
-        patch("app.routers.health.check_postgres", return_value=True),
+        patch("app.routers.health._check_postgres", return_value=True),
         patch("app.routers.health.check_mongo", new_callable=AsyncMock, return_value=True),
         patch("app.routers.health._check_auth", new_callable=AsyncMock, return_value=True),
     ):
@@ -24,7 +24,7 @@ def test_health_returns_200():
 
 def test_health_degraded_when_db_down():
     with (
-        patch("app.routers.health.check_postgres", return_value=False),
+        patch("app.routers.health._check_postgres", return_value=False),
         patch("app.routers.health.check_mongo", new_callable=AsyncMock, return_value=True),
         patch("app.routers.health._check_auth", new_callable=AsyncMock, return_value=True),
     ):
