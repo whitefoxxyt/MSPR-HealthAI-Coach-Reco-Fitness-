@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 from typing import Literal
+
 from cachetools import TTLCache
 from sqlalchemy.orm import Session
+
 from app.models.exercise import ExerciseORM
 
 _cache: TTLCache = TTLCache(maxsize=1, ttl=3600)

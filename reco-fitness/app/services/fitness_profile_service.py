@@ -1,6 +1,8 @@
 from datetime import datetime, timezone
-from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from fastapi import HTTPException, status
+from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from app.schemas.fitness_profile import FitnessProfileRequest, FitnessProfileResponse
 
 COLLECTION = "user_fitness_profiles"

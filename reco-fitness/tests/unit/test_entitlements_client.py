@@ -1,8 +1,9 @@
+from datetime import datetime
+from unittest.mock import patch
+
+import httpx
 import pytest
 import respx
-import httpx
-from unittest.mock import patch
-from datetime import datetime, timezone
 
 AUTH_API_URL = "https://fake-auth"
 ENTITLEMENTS_URL = f"{AUTH_API_URL}/api/entitlements/me"
@@ -27,7 +28,7 @@ def reset_cache():
     clear_cache()
 
 
-from app.services.entitlements_client import get_entitlements, Entitlements  # noqa: E402
+from app.services.entitlements_client import get_entitlements  # noqa: E402
 
 
 class TestTierFree:

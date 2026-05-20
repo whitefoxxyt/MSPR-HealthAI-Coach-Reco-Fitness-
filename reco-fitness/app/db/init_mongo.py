@@ -12,9 +12,8 @@ Usage :
     # depuis le shell (utilise MONGO_URI + MONGO_DATABASE)
     python -m app.db.init_mongo
 """
-from pymongo.database import Database
 from pymongo import ASCENDING, DESCENDING
-
+from pymongo.database import Database
 
 COLLECTIONS = ("user_fitness_profiles", "workout_programs", "recommendation_history")
 
@@ -44,6 +43,7 @@ def init_mongo(db: Database) -> None:
 
 def _main() -> None:
     from pymongo import MongoClient
+
     from app.config import settings
 
     client = MongoClient(settings.MONGO_URI)

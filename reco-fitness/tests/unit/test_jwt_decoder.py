@@ -1,8 +1,9 @@
 import time
-import pytest
-from jose import jwt
-from fastapi import HTTPException
 from unittest.mock import patch
+
+import pytest
+from fastapi import HTTPException
+from jose import jwt
 
 SECRET = "test_secret_for_unit_tests"
 ALGORITHM = "HS256"
@@ -31,7 +32,7 @@ def patch_secret():
 # ------------------------------------------------------------
 # Import apres le patch pour eviter les effets de bord
 # ------------------------------------------------------------
-from app.services.jwt_decoder import decode, UserIdentity  # noqa: E402
+from app.services.jwt_decoder import UserIdentity, decode  # noqa: E402
 
 
 class TestDecodeValid:
@@ -100,8 +101,9 @@ class TestDecodeUnexpectedAlgorithm:
         Un token signe avec un algorithme different de HS256 doit etre rejete.
         On simule en passant un token malforge (header algo modifie).
         """
-        from jose.utils import base64url_encode
         import json
+
+        from jose.utils import base64url_encode
 
         header = base64url_encode(json.dumps({"alg": "RS256", "typ": "JWT"}).encode())
         payload_b = base64url_encode(

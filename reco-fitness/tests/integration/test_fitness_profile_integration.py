@@ -3,10 +3,11 @@ Tests d'integration du fitness profile : PUT/GET sur un vrai MongoDB ephemere.
 Necessite Docker (testcontainers).
 """
 import time
+from unittest.mock import patch
+
 import pytest
 from fastapi.testclient import TestClient
 from jose import jwt
-from unittest.mock import patch
 
 TEST_SECRET = "test_better_auth_secret_for_ci"
 
@@ -47,8 +48,8 @@ def mongo_test_db():
 def client(mongo_test_db):
     """Client FastAPI avec MongoDB pointe vers le container de test."""
     from motor.motor_asyncio import AsyncIOMotorClient
+
     from app.main import app
-    from app import dependencies
 
     test_motor_client = AsyncIOMotorClient(mongo_test_db)
     test_db = test_motor_client["reco_fitness_test"]

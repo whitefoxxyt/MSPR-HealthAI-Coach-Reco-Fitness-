@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from jose import jwt, JWTError, ExpiredSignatureError
+
 from fastapi import HTTPException, status
+from jose import ExpiredSignatureError, JWTError, jwt
+
 from app.config import settings
 
 ALGORITHM = "HS256"

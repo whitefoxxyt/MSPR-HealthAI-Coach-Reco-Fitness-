@@ -1,10 +1,12 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
+
 from app.dependencies import get_current_user, get_db
-from app.services.jwt_decoder import UserIdentity
-from app.services import fitness_profile_service as svc
 from app.schemas.fitness_profile import FitnessProfileRequest, FitnessProfileResponse
+from app.services import fitness_profile_service as svc
+from app.services.jwt_decoder import UserIdentity
 
 router = APIRouter(prefix="/fitness-profile", tags=["Fitness Profile"])
 

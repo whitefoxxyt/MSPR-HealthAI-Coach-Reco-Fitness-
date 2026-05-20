@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
+
 import httpx
 from cachetools import TTLCache
+
 from app.config import settings
 
 _cache: TTLCache = TTLCache(maxsize=10000, ttl=60)

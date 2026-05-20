@@ -1,13 +1,15 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
+
+from app.models.exercise import ExerciseORM
 from app.services.exercise_catalog import (
+    Exercise,
+    ExerciseFilters,
     get_all,
     get_by_id,
     invalidate_cache,
-    Exercise,
-    ExerciseFilters,
 )
-from app.models.exercise import ExerciseORM
 
 
 def _make_orm(

@@ -1,8 +1,9 @@
 from fastapi import Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from app.services.jwt_decoder import decode, UserIdentity
-from app.db.mongo import get_mongo_db
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from motor.motor_asyncio import AsyncIOMotorDatabase
+
+from app.db.mongo import get_mongo_db
+from app.services.jwt_decoder import UserIdentity, decode
 
 bearer_scheme = HTTPBearer()
 

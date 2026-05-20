@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
+
 import httpx
 from fastapi import APIRouter
-from app.db.session import engine
 from sqlalchemy import text
-from app.db.mongo import check_mongo
+
 from app.config import settings
+from app.db.mongo import check_mongo
+from app.db.session import engine
 
 router = APIRouter(tags=["Health"])
 

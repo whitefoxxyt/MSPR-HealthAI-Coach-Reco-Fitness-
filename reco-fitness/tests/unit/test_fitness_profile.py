@@ -2,15 +2,17 @@
 Tests unitaires du fitness profile service.
 MongoDB est mocke -- pas besoin de Docker.
 """
-import pytest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from fastapi import HTTPException
+
 from app.schemas.fitness_profile import (
+    ExperienceLevel,
     FitnessProfileRequest,
     FitnessProfileResponse,
     HealthGoalFitness,
-    ExperienceLevel,
     SessionPreferences,
 )
 from app.services import fitness_profile_service as svc

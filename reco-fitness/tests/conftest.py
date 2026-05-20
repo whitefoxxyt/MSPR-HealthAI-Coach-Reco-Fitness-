@@ -10,12 +10,12 @@ Fixtures disponibles :
   valid_jwt               : helper generant un JWT signe
 """
 import time
+
 import pytest
 import respx
 from jose import jwt
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-
+from sqlalchemy.orm import Session, sessionmaker
 
 # ------------------------------------------------------------
 # Constantes de test
@@ -39,6 +39,7 @@ def pg_container():
     """
     try:
         from testcontainers.postgres import PostgresContainer
+
         from app.db.session import Base
 
         with PostgresContainer("postgres:16-alpine") as pg:
@@ -58,8 +59,9 @@ def mongo_container():
     Necessite Docker. Marque tes tests @pytest.mark.integration pour les isoler.
     """
     try:
-        from testcontainers.mongodb import MongoDbContainer
         from pymongo import MongoClient
+        from testcontainers.mongodb import MongoDbContainer
+
         from app.db.init_mongo import init_mongo
 
         with MongoDbContainer("mongo:7-jammy") as mongo:

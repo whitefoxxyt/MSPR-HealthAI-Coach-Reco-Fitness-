@@ -1,6 +1,7 @@
 """Smoke test unitaire -- verifie que les imports et fixtures de base fonctionnent."""
-import pytest
 import time
+
+import pytest
 from jose import jwt
 
 TEST_SECRET = "test_better_auth_secret_for_ci"

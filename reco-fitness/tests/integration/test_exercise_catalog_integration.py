@@ -3,19 +3,18 @@ Tests d'integration pour exercise_catalog.py.
 Demarre un vrai PostgreSQL via testcontainers (Docker requis).
 """
 import pytest
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 
+from app.db.session import Base
+from app.models.exercise import ExerciseORM
 from app.services.exercise_catalog import (
+    ExerciseFilters,
     get_all,
     get_by_id,
     invalidate_cache,
-    ExerciseFilters,
 )
-from app.models.exercise import ExerciseORM
-from app.db.session import Base
-
 
 # ------------------------------------------------------------
 # Fixture : PostgreSQL container partage pour toute la session
