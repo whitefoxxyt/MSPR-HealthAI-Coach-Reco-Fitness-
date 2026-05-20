@@ -54,13 +54,22 @@ def pg_container():
 def mongo_container():
     """
     Demarre un container MongoDB ephemere pour toute la session de tests.
+    Joue init_mongo.py au demarrage (collections + index sur reco_fitness_test).
     Necessite Docker. Marque tes tests @pytest.mark.integration pour les isoler.
     """
     try:
         from testcontainers.mongodb import MongoDbContainer
+        from pymongo import MongoClient
+        from app.db.init_mongo import init_mongo
 
         with MongoDbContainer("mongo:7-jammy") as mongo:
-            yield {"url": mongo.get_connection_url()}
+            url = mongo.get_connection_url()
+            client = MongoClient(url)
+            try:
+                init_mongo(client["reco_fitness_test"])
+            finally:
+                client.close()
+            yield {"url": url}
     except Exception:
         pytest.skip("Docker non disponible -- tests d'integration ignores")
 
@@ -101,9 +110,10 @@ def mongo_db(mongo_container):
 
     yield db
 
-    # Nettoyage apres chaque test
+    # Nettoyage apres chaque test : on vide les documents mais on garde
+    # les collections et leurs index (init_mongo n'est rejoue qu'au demarrage du container).
     for name in db.list_collection_names():
-        db.drop_collection(name)
+        db[name].delete_many({})
     client.close()
 
 
