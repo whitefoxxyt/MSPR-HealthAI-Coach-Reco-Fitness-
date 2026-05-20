@@ -9,3 +9,5 @@ cachetools>=5.3.3
 python-jose[cryptography]>=3.3.0
 pydantic-settings>=2.2.1
 pydantic>=2.7.0
+pandas>=2.2.0
+numpy>=1.26.0

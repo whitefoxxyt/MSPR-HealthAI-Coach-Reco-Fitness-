@@ -10,3 +10,6 @@ __pycache__/
 htmlcov/
 dist/
 *.egg-info/
+
+# Datasets generes (regenerables via scripts/generate_training_data.py)
+data/training/

@@ -29,6 +29,28 @@ score = (
 | `PUT /programs/{program_id}/feedback` | Retour utilisateur (adaptation) |
 | `GET /health` | Healthcheck |
 
+## Dataset d'entraînement ML
+
+Le scoring rule-based sert d'**oracle** pour générer un dataset synthétique destiné à entraîner un modèle ML (issue RF-9).
+
+```bash
+# Génère data/training/scoring_dataset.csv (5000+ lignes)
+python scripts/generate_training_data.py
+
+# Avec paramètres custom
+python scripts/generate_training_data.py --n-profiles 25 --seed 42 \
+    --out data/training/scoring_dataset.csv
+```
+
+Le dossier `data/training/` est **gitignore** : le dataset est regénérable à tout moment depuis le catalogue PostgreSQL. Format CSV avec :
+
+- une colonne `exercise_id`
+- des features one-hot/multi-hot dérivées du catalogue (`ex_muscle_*`, `ex_equipment_*`, `ex_difficulty_*`, `ex_category_*`)
+- des features one-hot/multi-hot du profil (`profile_goal_*`, `profile_level_*`, `profile_equipment_*`, `profile_limit_*`)
+- une colonne `label` (score float ∈ [0, 1]) calculée via `scoring_rule_based.score_exercise`
+
+Distribution équilibrée : 25 % par objectif fitness × ~33 % par niveau d'expérience, sous-ensembles d'équipement/limitations tirés aléatoirement depuis le vocab du catalogue. Reproductible via `--seed`.
+
 ## Démarrage
 
 ```bash
