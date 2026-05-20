@@ -206,7 +206,7 @@ class TestRecommendPremiumPlus:
             lambda exercise, profile: max(0.0, 1.0 - exercise.id * 0.001),
         )
 
-    def test_without_biometrics_uses_neutral_intensity(self):
+    def test_without_biometrics_keeps_base_sessions_per_week(self):
         catalog = [
             _make_exercise(i, category="strength", difficulty="intermediate")
             for i in range(1, 31)
@@ -221,12 +221,14 @@ class TestRecommendPremiumPlus:
         )
 
         assert program.scoring_strategy == "hybrid_rank_fusion"
-        assert program.intensity_modifier == 1.0
+        # muscle_strength : 4 seances/sem nominales
+        for week in program.weeks:
+            assert len(week) == 4
 
-    def test_high_resting_heart_rate_lowers_intensity(self):
+    def test_high_avg_heart_rate_reduces_sessions_per_week_by_one(self):
         from datetime import datetime, timezone
 
-        from app.services.biometric_reader import Biometrics
+        from app.services.biometric_reader import Biometric
 
         catalog = [
             _make_exercise(i, category="strength", difficulty="intermediate")
@@ -236,16 +238,73 @@ class TestRecommendPremiumPlus:
             goal=HealthGoalFitness.muscle_strength,
             level=ExperienceLevel.intermediate,
         )
-        # HR repos eleve -> signal de fatigue/surentrainement, on baisse la charge
-        biometrics = Biometrics(
-            heart_rate_rest=90,
-            bmi=24.0,
-            body_fat_pct=18.0,
-            recorded_at=datetime.now(timezone.utc),
+        # avg_heart_rate_bpm > 80 -> signal de fatigue/surentrainement,
+        # on retire 1 seance/sem (cf acceptance criteria RF-11).
+        biometrics = Biometric(
+            user_id=1,
+            avg_heart_rate_bpm=90,
+            measured_at=datetime.now(timezone.utc),
         )
 
         program = orchestrator.recommend_premium_plus(
             profile, history=[], catalog=catalog, biometrics=biometrics
         )
 
-        assert program.intensity_modifier < 1.0
+        # muscle_strength nominal = 4 seances/sem, ici 3 (4 - 1)
+        for week in program.weeks:
+            assert len(week) == 3
+
+    def test_at_threshold_avg_heart_rate_does_not_reduce_sessions(self):
+        from datetime import datetime, timezone
+
+        from app.services.biometric_reader import Biometric
+
+        catalog = [
+            _make_exercise(i, category="strength", difficulty="intermediate")
+            for i in range(1, 31)
+        ]
+        profile = _profile(
+            goal=HealthGoalFitness.muscle_strength,
+            level=ExperienceLevel.intermediate,
+        )
+        # Seuil strict (>80) : avg=80 ne doit pas declencher de reduction.
+        biometrics = Biometric(
+            user_id=1,
+            avg_heart_rate_bpm=80,
+            measured_at=datetime.now(timezone.utc),
+        )
+
+        program = orchestrator.recommend_premium_plus(
+            profile, history=[], catalog=catalog, biometrics=biometrics
+        )
+
+        for week in program.weeks:
+            assert len(week) == 4
+
+    def test_missing_avg_heart_rate_does_not_reduce_sessions(self):
+        from datetime import datetime, timezone
+
+        from app.services.biometric_reader import Biometric
+
+        catalog = [
+            _make_exercise(i, category="strength", difficulty="intermediate")
+            for i in range(1, 31)
+        ]
+        profile = _profile(
+            goal=HealthGoalFitness.muscle_strength,
+            level=ExperienceLevel.intermediate,
+        )
+        # Une biometrique presente mais sans FC moyenne -> pas de reduction.
+        biometrics = Biometric(
+            user_id=1,
+            weight_kg=70.0,
+            avg_heart_rate_bpm=None,
+            measured_at=datetime.now(timezone.utc),
+        )
+
+        program = orchestrator.recommend_premium_plus(
+            profile, history=[], catalog=catalog, biometrics=biometrics
+        )
+
+        for week in program.weeks:
+            assert len(week) == 4
