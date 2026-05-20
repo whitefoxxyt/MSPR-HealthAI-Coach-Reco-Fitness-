@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -48,7 +49,7 @@ def _reco(
 
 
 def _make_exercise(
-    id: int = 1,
+    exercise_id: int = 1,
     name: str = "Squat",
     target_muscles: list[str] | None = None,
     equipment: list[str] | None = None,
@@ -56,7 +57,7 @@ def _make_exercise(
     category: str | None = "legs",
 ) -> Exercise:
     return Exercise(
-        id=id,
+        id=exercise_id,
         name=name,
         target_muscles=target_muscles or ["quadriceps"],
         equipment=equipment or ["none"],
@@ -150,24 +151,24 @@ class TestGoalMatch:
 
 class TestNoveltyAndFeedbackScore:
     def test_never_done_returns_one(self):
-        ex = _make_exercise(id=1)
+        ex = _make_exercise(exercise_id=1)
         assert novelty_and_feedback_score(ex, []) == 1.0
 
     def test_just_done_returns_zero(self):
-        ex = _make_exercise(id=1)
+        ex = _make_exercise(exercise_id=1)
         history = [_reco(exercise_id=1, days_ago=0)]
         assert novelty_and_feedback_score(ex, history) == pytest.approx(0.0, abs=1e-3)
 
     def test_curve_grows_with_days_since_last(self):
-        ex = _make_exercise(id=1)
+        ex = _make_exercise(exercise_id=1)
         score_7d = novelty_and_feedback_score(ex, [_reco(1, days_ago=7)])
         score_14d = novelty_and_feedback_score(ex, [_reco(1, days_ago=14)])
-        assert score_7d == pytest.approx(1.0 - 1.0 / 2.718281828, abs=1e-3)
+        assert score_7d == pytest.approx(1.0 - 1.0 / math.e, abs=1e-3)
         assert score_14d == pytest.approx(0.865, abs=1e-3)
         assert score_14d > score_7d
 
     def test_only_last_occurrence_counts(self):
-        ex = _make_exercise(id=1)
+        ex = _make_exercise(exercise_id=1)
         history_old_then_recent = [_reco(1, days_ago=30), _reco(1, days_ago=2)]
         history_only_old = [_reco(1, days_ago=30)]
         score_mixed = novelty_and_feedback_score(ex, history_old_then_recent)
@@ -176,24 +177,24 @@ class TestNoveltyAndFeedbackScore:
         assert score_mixed < 0.3
 
     def test_other_exercises_in_history_ignored(self):
-        ex = _make_exercise(id=1)
+        ex = _make_exercise(exercise_id=1)
         history = [_reco(99, days_ago=0)]
         assert novelty_and_feedback_score(ex, history) == 1.0
 
     def test_feedback_one_divides_score_by_five(self):
-        ex = _make_exercise(id=1)
+        ex = _make_exercise(exercise_id=1)
         score_no_fb = novelty_and_feedback_score(ex, [_reco(1, days_ago=14)])
         score_fb_1 = novelty_and_feedback_score(ex, [_reco(1, days_ago=14, feedback_score=1)])
         assert score_fb_1 == pytest.approx(score_no_fb / 5, abs=1e-6)
 
     def test_feedback_two_divides_score_by_two(self):
-        ex = _make_exercise(id=1)
+        ex = _make_exercise(exercise_id=1)
         score_no_fb = novelty_and_feedback_score(ex, [_reco(1, days_ago=14)])
         score_fb_2 = novelty_and_feedback_score(ex, [_reco(1, days_ago=14, feedback_score=2)])
         assert score_fb_2 == pytest.approx(score_no_fb / 2, abs=1e-6)
 
     def test_feedback_three_no_penalty(self):
-        ex = _make_exercise(id=1)
+        ex = _make_exercise(exercise_id=1)
         score_no_fb = novelty_and_feedback_score(ex, [_reco(1, days_ago=14)])
         score_fb_3 = novelty_and_feedback_score(ex, [_reco(1, days_ago=14, feedback_score=3)])
         assert score_fb_3 == pytest.approx(score_no_fb, abs=1e-6)
@@ -202,7 +203,7 @@ class TestNoveltyAndFeedbackScore:
 class TestScoreExercise:
     def test_returns_weighted_sum_between_zero_and_one(self):
         ex = _make_exercise(
-            id=1,
+            exercise_id=1,
             category="cardio",
             difficulty="intermediate",
             equipment=["none"],
@@ -217,7 +218,7 @@ class TestScoreExercise:
 
     def test_changing_goal_changes_score(self):
         ex = _make_exercise(
-            id=1,
+            exercise_id=1,
             category="cardio",
             difficulty="intermediate",
             equipment=["none"],

@@ -13,6 +13,8 @@ from app.services.exercise_catalog import Exercise
 
 @dataclass
 class Recommendation:
+    """Entree d'historique de recommandation : exercice, retour utilisateur et date."""
+
     exercise_id: int
     feedback_score: int | None
     created_at: datetime
@@ -28,6 +30,7 @@ _DEFAULT_AFFINITY = 0.5
 
 
 def goal_match(exercise: Exercise, health_goal: HealthGoalFitness) -> float:
+    """Score d'affinite entre la categorie de l'exercice et l'objectif sante."""
     affinity = GOAL_CATEGORY_AFFINITY.get(health_goal.value, {})
     if exercise.category is None:
         return _DEFAULT_AFFINITY
@@ -35,6 +38,7 @@ def goal_match(exercise: Exercise, health_goal: HealthGoalFitness) -> float:
 
 
 def equipment_match(exercise: Exercise, user_equipment: list[str]) -> float:
+    """Ratio d'equipement requis par l'exercice effectivement possede par l'utilisateur."""
     required = [e for e in exercise.equipment if e != "none"]
     if not required:
         return 1.0
@@ -47,6 +51,7 @@ _LEVEL_ORDER = {"beginner": 0, "intermediate": 1, "advanced": 2}
 
 
 def level_match(exercise: Exercise, experience_level: ExperienceLevel) -> float:
+    """Score d'adequation entre la difficulte de l'exercice et le niveau de l'utilisateur."""
     ex_idx = _LEVEL_ORDER.get(exercise.difficulty, 0)
     user_idx = _LEVEL_ORDER[experience_level.value]
     gap = abs(ex_idx - user_idx)
@@ -61,6 +66,7 @@ _NOVELTY_TAU_DAYS = 7.0
 
 
 def novelty_and_feedback_score(exercise: Exercise, history: list[Recommendation]) -> float:
+    """Score de nouveaute (decroissance exponentielle) module par le dernier feedback."""
     last = _last_occurrence(exercise, history)
     if last is None:
         return 1.0
@@ -93,6 +99,7 @@ def _days_since(when: datetime) -> float:
 
 
 def limitation_filter(exercise: Exercise, limitations: list[str]) -> float:
+    """Renvoie 0.0 si l'exercice cible un muscle ou une categorie contre-indique, sinon 1.0."""
     blocked = set(limitations)
     if blocked & set(exercise.target_muscles):
         return 0.0
@@ -106,6 +113,7 @@ def score_exercise(
     profile: FitnessProfileRequest,
     history: list[Recommendation],
 ) -> float:
+    """Score global d'un exercice : somme ponderee des 5 dimensions selon l'objectif sante."""
     weights = SCORING_WEIGHTS[profile.health_goal_fitness.value]
     return (
         weights["goal"] * goal_match(exercise, profile.health_goal_fitness)
