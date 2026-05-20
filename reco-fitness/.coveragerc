@@ -1,0 +1,8 @@
+[run]
+source = app
+omit = app/data/*
+
+[report]
+show_missing = True
+# Seuil 80% impose par la CI uniquement : pytest -m "not slow" --cov-fail-under=80
+# Les tests unitaires seuls couvrent ~63% (normal : routers et main couverts en integration)

@@ -4,7 +4,7 @@ import httpx
 from unittest.mock import patch
 from datetime import datetime, timezone
 
-AUTH_API_URL = "http://fake-auth"
+AUTH_API_URL = "https://fake-auth"
 ENTITLEMENTS_URL = f"{AUTH_API_URL}/api/entitlements/me"
 FAKE_JWT = "fake.jwt.token"
 FAKE_USER_ID = "user-abc"

@@ -22,7 +22,7 @@ from sqlalchemy.orm import sessionmaker, Session
 # ------------------------------------------------------------
 
 TEST_SECRET = "test_better_auth_secret_for_ci"
-TEST_AUTH_URL = "http://fake-mspr-auth"
+TEST_AUTH_URL = "https://fake-mspr-auth"
 ENTITLEMENTS_URL = f"{TEST_AUTH_URL}/api/entitlements/me"
 
 

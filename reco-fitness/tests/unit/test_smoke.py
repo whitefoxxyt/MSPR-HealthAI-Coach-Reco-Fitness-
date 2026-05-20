@@ -26,6 +26,6 @@ def test_valid_jwt_fixture_default_values(valid_jwt):
 async def test_mock_auth_fixture_returns_free_tier_by_default(mock_auth):
     import httpx
     async with httpx.AsyncClient() as client:
-        response = await client.get("http://fake-mspr-auth/api/entitlements/me")
+        response = await client.get("https://fake-mspr-auth/api/entitlements/me")
     assert response.status_code == 200
     assert response.json()["tier"] == "free"
