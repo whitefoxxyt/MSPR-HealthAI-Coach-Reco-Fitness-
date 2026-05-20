@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Literal
 
 from app.schemas.fitness_profile import FitnessProfileRequest, HealthGoalFitness
-from app.services.biometric_reader import Biometrics
+from app.services.biometric_reader import Biometric
 from app.services.exercise_catalog import Exercise
 from app.services.scoring_ml import score_exercise as score_ml
 from app.services.scoring_rule_based import Recommendation
@@ -26,7 +26,6 @@ class WorkoutProgram:
     weeks: list[list[list[Exercise]]]
     duration_weeks: int
     scoring_strategy: ScoringStrategy
-    intensity_modifier: float = 1.0
 
 
 # Mapping goal -> (sessions_per_week, exercises_per_session, premium_duration_weeks)
@@ -145,6 +144,26 @@ def recommend_free(
     )
 
 
+def _hybrid_ranked(
+    profile: FitnessProfileRequest,
+    history: list[Recommendation],
+    catalog: list[Exercise],
+) -> list[Exercise]:
+    """Top-N rule-based ∪ Top-N ML, fusionnes par rang (filtre dur applique en amont)."""
+    eligible = [ex for ex in catalog if _passes_hard_filters(ex, profile)]
+    top_rule_based = sorted(
+        eligible,
+        key=lambda ex: score_rule_based(ex, profile, history),
+        reverse=True,
+    )[:_TOP_N_CANDIDATES]
+    top_ml = sorted(
+        eligible,
+        key=lambda ex: score_ml(ex, profile),
+        reverse=True,
+    )[:_TOP_N_CANDIDATES]
+    return _rank_fusion(top_rule_based, top_ml)
+
+
 def recommend_premium(
     profile: FitnessProfileRequest,
     history: list[Recommendation],
@@ -157,20 +176,8 @@ def recommend_premium(
     sessions_per_week, exercises_per_session, duration_weeks = _shape_for(
         profile.health_goal_fitness
     )
-    eligible = [ex for ex in catalog if _passes_hard_filters(ex, profile)]
-    top_rule_based = sorted(
-        eligible,
-        key=lambda ex: score_rule_based(ex, profile, history),
-        reverse=True,
-    )[:_TOP_N_CANDIDATES]
-    top_ml = sorted(
-        eligible,
-        key=lambda ex: score_ml(ex, profile),
-        reverse=True,
-    )[:_TOP_N_CANDIDATES]
-    ranked = _rank_fusion(top_rule_based, top_ml)
     return _structure_program(
-        ranked=ranked,
+        ranked=_hybrid_ranked(profile, history, catalog),
         duration_weeks=duration_weeks,
         sessions_per_week=sessions_per_week,
         exercises_per_session=exercises_per_session,
@@ -178,37 +185,43 @@ def recommend_premium(
     )
 
 
-# Seuils d'ajustement de la charge sur la base de la frequence cardiaque au repos.
-# HR repos eleve = signal de fatigue/surentrainement => on baisse la charge.
-# HR repos bas = signal de bonne forme cardio => on autorise un peu plus de charge.
-_HR_REST_HIGH_BPM = 80
-_HR_REST_LOW_BPM = 55
-_INTENSITY_REDUCED = 0.85
-_INTENSITY_BOOSTED = 1.10
+# Seuil d'attenuation : FC moyenne elevee = signal de fatigue/surentrainement.
+# RF-11 acceptance criteria : avg_heart_rate_bpm > 80 -> -1 seance/semaine.
+_AVG_HR_HIGH_BPM = 80
+_MIN_SESSIONS_PER_WEEK = 1
 
 
-def _intensity_from_biometrics(biometrics: Biometrics | None) -> float:
-    """Calcule un coefficient multiplicateur de charge a partir des biometriques."""
-    if biometrics is None or biometrics.heart_rate_rest is None:
-        return 1.0
-    if biometrics.heart_rate_rest >= _HR_REST_HIGH_BPM:
-        return _INTENSITY_REDUCED
-    if biometrics.heart_rate_rest <= _HR_REST_LOW_BPM:
-        return _INTENSITY_BOOSTED
-    return 1.0
+def _sessions_adjustment(biometrics: Biometric | None) -> int:
+    """Retourne le delta a appliquer au nb de seances/semaine selon les biometriques."""
+    if biometrics is None or biometrics.avg_heart_rate_bpm is None:
+        return 0
+    if biometrics.avg_heart_rate_bpm > _AVG_HR_HIGH_BPM:
+        return -1
+    return 0
 
 
 def recommend_premium_plus(
     profile: FitnessProfileRequest,
     history: list[Recommendation],
     catalog: list[Exercise],
-    biometrics: Biometrics | None,
+    biometrics: Biometric | None,
 ) -> WorkoutProgram:
     """
     Tier premium_plus : meme moteur que premium, enrichi d'un ajustement de la
-    charge a partir des biometriques recentes. Quand biometrics=None, comportement
-    equivalent a premium (intensity_modifier=1.0).
+    charge a partir des biometriques recentes. Quand biometrics=None ou que la
+    FC moyenne n'est pas elevee, comportement equivalent a premium.
     """
-    program = recommend_premium(profile, history, catalog)
-    program.intensity_modifier = _intensity_from_biometrics(biometrics)
-    return program
+    base_sessions, exercises_per_session, duration_weeks = _shape_for(
+        profile.health_goal_fitness
+    )
+    sessions_per_week = max(
+        _MIN_SESSIONS_PER_WEEK,
+        base_sessions + _sessions_adjustment(biometrics),
+    )
+    return _structure_program(
+        ranked=_hybrid_ranked(profile, history, catalog),
+        duration_weeks=duration_weeks,
+        sessions_per_week=sessions_per_week,
+        exercises_per_session=exercises_per_session,
+        strategy="hybrid_rank_fusion",
+    )

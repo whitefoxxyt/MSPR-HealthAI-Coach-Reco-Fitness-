@@ -1,29 +1,49 @@
 """
-Lecture des biometriques recentes d'un utilisateur (RF-10, tier premium_plus).
+Lecture des biometriques recentes d'un utilisateur (RF-11, tier premium_plus).
 
-Stub : la lecture reelle (PostgreSQL biometric_entries ou Mongo) sera branchee
-dans une issue ulterieure. Pour l'instant retourne None par defaut, ce qui
-fait degrader proprement le tier premium_plus vers le comportement premium.
+Lit la table PostgreSQL `biometric_entries` en read-only pour fournir a
+l'orchestrateur les biometriques recentes d'un utilisateur. Si aucune donnee
+n'est disponible, retourne `None` -- le tier premium_plus se replie alors
+sur le comportement premium nominal.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
-
-@dataclass
-class Biometrics:
-    heart_rate_rest: int | None
-    bmi: float | None
-    body_fat_pct: float | None
-    recorded_at: datetime
+from app.models.biometric import BiometricEntryORM
 
 
-async def get_recent_biometrics(
-    user_id: str,
-    db: AsyncIOMotorDatabase,
-) -> Biometrics | None:
-    """Retourne les biometriques recentes du user, ou None si indisponible."""
-    return None
+class Biometric(BaseModel):
+    """Biometrique recente d'un utilisateur (snapshot lu depuis biometric_entries)."""
+
+    user_id: int
+    weight_kg: float | None = None
+    avg_heart_rate_bpm: int | None = None
+    experience_level: str | None = None
+    measured_at: datetime
+
+
+def get_recent(user_id: int, db: Session, days: int = 30) -> Biometric | None:
+    """Retourne la biometrique la plus recente du user dans la fenetre `days`, ou None."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    row = (
+        db.query(BiometricEntryORM)
+        .filter(
+            BiometricEntryORM.user_id == user_id,
+            BiometricEntryORM.measured_at >= cutoff,
+        )
+        .order_by(BiometricEntryORM.measured_at.desc())
+        .first()
+    )
+    if row is None:
+        return None
+    return Biometric(
+        user_id=row.user_id,
+        weight_kg=row.weight_kg,
+        avg_heart_rate_bpm=row.avg_heart_rate_bpm,
+        experience_level=row.experience_level,
+        measured_at=row.measured_at,
+    )

@@ -223,29 +223,31 @@ class TestPostRecommendationsPremium:
         assert body["duration_weeks"] == 4
         assert len(body["weeks"]) == 4
 
-    def test_premium_plus_calls_biometric_reader(self, client, mock_auth_tier):
+
+@pytest.mark.integration
+class TestPostRecommendationsPremiumPlus:
+    def test_premium_plus_high_avg_heart_rate_reduces_sessions(self, client, mock_auth_tier):
         from datetime import datetime, timezone
 
-        from app.services.biometric_reader import Biometrics
+        from app.services.biometric_reader import Biometric
 
         mock_auth_tier("premium_plus")
         c, test_db = client
-        user_id = "u-premiumplus-1"
+        # user_id numerique pour que la conversion str->int dans le router fonctionne.
+        user_id = "42"
         _seed_profile(test_db, user_id)
 
-        fake_biometrics = Biometrics(
-            heart_rate_rest=85,
-            bmi=24.0,
-            body_fat_pct=18.0,
-            recorded_at=datetime.now(timezone.utc),
+        fake_biometric = Biometric(
+            user_id=42,
+            avg_heart_rate_bpm=90,
+            weight_kg=72.5,
+            experience_level="intermediate",
+            measured_at=datetime.now(timezone.utc),
         )
 
-        async def fake_reader(user_id, db):
-            return fake_biometrics
-
         with patch(
-            "app.routers.recommendations.biometric_reader.get_recent_biometrics",
-            side_effect=fake_reader,
+            "app.routers.recommendations.biometric_reader.get_recent",
+            return_value=fake_biometric,
         ) as reader_mock:
             response = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
 
@@ -253,9 +255,31 @@ class TestPostRecommendationsPremium:
         body = response.json()
         assert body["tier_at_generation"] == "premium_plus"
         assert body["scoring_strategy"] == "hybrid_rank_fusion"
-        # HR repos eleve -> intensity_modifier reduit
-        assert body["intensity_modifier"] < 1.0
-        reader_mock.assert_awaited_once()
+        # PROFILE_DOC.health_goal_fitness=fat_loss -> 4 seances/sem nominal
+        # avg_heart_rate_bpm=90 (>80) -> -1 seance -> 3 seances/sem
+        for week in body["weeks"]:
+            assert len(week) == 3
+        reader_mock.assert_called_once()
+
+    def test_premium_plus_without_biometric_keeps_base_sessions(self, client, mock_auth_tier):
+        mock_auth_tier("premium_plus")
+        c, test_db = client
+        user_id = "43"
+        _seed_profile(test_db, user_id)
+
+        # get_recent retourne None -> comportement nominal de premium.
+        with patch(
+            "app.routers.recommendations.biometric_reader.get_recent",
+            return_value=None,
+        ):
+            response = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["tier_at_generation"] == "premium_plus"
+        # fat_loss premium duration_weeks=4, 4 seances/sem nominales
+        for week in body["weeks"]:
+            assert len(week) == 4
 
 
 @pytest.mark.integration
