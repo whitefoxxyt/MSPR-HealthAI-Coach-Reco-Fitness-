@@ -26,7 +26,6 @@ class WorkoutProgram:
     weeks: list[list[list[Exercise]]]
     duration_weeks: int
     scoring_strategy: ScoringStrategy
-    intensity_modifier: float = 1.0
 
 
 # Mapping goal -> (sessions_per_week, exercises_per_session, premium_duration_weeks)

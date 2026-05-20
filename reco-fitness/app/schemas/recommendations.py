@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class RecommendationRequest(BaseModel):
@@ -26,6 +26,5 @@ class WorkoutProgramResponse(BaseModel):
     duration_weeks: int
     scoring_strategy: Literal["rule_based", "hybrid_rank_fusion"]
     tier_at_generation: Literal["free", "premium", "premium_plus"]
-    intensity_modifier: float = Field(default=1.0)
     weeks: list[list[list[ExerciseInProgram]]]
     created_at: datetime
