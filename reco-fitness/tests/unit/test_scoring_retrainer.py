@@ -114,124 +114,6 @@ class TestBuildFeedbackRows:
         assert len(df) == 3
         assert sorted(df["label"].tolist()) == [0.2, 0.6, 1.0]
 
-
-def _mini_catalog(n: int = 8) -> list[Exercise]:
-    categories = ["cardio", "strength"]
-    difficulties = ["beginner", "intermediate", "advanced"]
-    equipments = [["none"], ["dumbbells"], ["barbell", "rack"]]
-    muscles = [["chest"], ["quadriceps"], ["glutes"], ["lower_back"]]
-    return [
-        Exercise(
-            id=i,
-            name=f"ex-{i}",
-            target_muscles=muscles[i % len(muscles)],
-            equipment=equipments[i % len(equipments)],
-            difficulty=difficulties[i % len(difficulties)],
-            category=categories[i % len(categories)],
-        )
-        for i in range(1, n + 1)
-    ]
-
-
-@pytest.fixture()
-def base_csv(tmp_path: Path) -> Path:
-    df = build_dataset(_mini_catalog(8), n_profiles=40, seed=42)
-    path = tmp_path / "scoring_dataset.csv"
-    df.to_csv(path, index=False)
-    return path
-
-
-class TestRetrainAndMaybeReplace:
-    def test_first_run_without_old_model_writes_pickle_and_returns_replaced_true(
-        self, base_csv: Path, tmp_path: Path
-    ):
-        model_path = tmp_path / "scoring_model.pkl"
-        report_path = tmp_path / "retrain_report.json"
-        assert not model_path.exists()
-
-        report = retrain_and_maybe_replace(
-            base_csv=base_csv,
-            feedback_rows=pd.DataFrame(),
-            model_path=model_path,
-            report_path=report_path,
-        )
-
-        assert report["replaced"] is True
-        assert model_path.exists()
-        bundle = joblib.load(model_path)
-        assert set(bundle) == {"model", "vocab", "feature_columns"}
-
-
-    def test_empty_feedback_falls_back_to_base_dataset_without_crash(
-        self, base_csv: Path, tmp_path: Path
-    ):
-        report = retrain_and_maybe_replace(
-            base_csv=base_csv,
-            feedback_rows=pd.DataFrame(),
-            model_path=tmp_path / "scoring_model.pkl",
-            report_path=tmp_path / "retrain_report.json",
-        )
-
-        assert report["n_feedback_used"] == 0
-        assert isinstance(report["new_f1"], float)
-
-    def test_report_has_required_keys_and_persists_as_json(
-        self, base_csv: Path, tmp_path: Path
-    ):
-        report_path = tmp_path / "retrain_report.json"
-        report = retrain_and_maybe_replace(
-            base_csv=base_csv,
-            feedback_rows=pd.DataFrame(),
-            model_path=tmp_path / "scoring_model.pkl",
-            report_path=report_path,
-        )
-
-        expected = {"old_f1", "new_f1", "old_r2", "new_r2", "replaced", "n_feedback_used"}
-        assert set(report) == expected
-        # Persiste un JSON parsable avec les memes cles.
-        import json
-
-        on_disk = json.loads(report_path.read_text())
-        assert set(on_disk) == expected
-
-    def test_pipeline_keeps_pickle_when_replacement_policy_rejects(
-        self, base_csv: Path, tmp_path: Path, monkeypatch
-    ):
-        from app.services import scoring_retrainer
-
-        model_path = tmp_path / "scoring_model.pkl"
-        report_path = tmp_path / "retrain_report.json"
-
-        # 1er run : initialise le pickle.
-        retrain_and_maybe_replace(base_csv, pd.DataFrame(), model_path, report_path)
-        original_bytes = model_path.read_bytes()
-
-        # 2e run : on force la decision a "ne pas remplacer".
-        monkeypatch.setattr(
-            scoring_retrainer, "should_replace_model", lambda old, new: False
-        )
-        report = retrain_and_maybe_replace(
-            base_csv, pd.DataFrame(), model_path, report_path
-        )
-
-        assert report["replaced"] is False
-        assert model_path.read_bytes() == original_bytes
-
-
-class TestShouldReplaceModel:
-    def test_no_old_model_means_replace(self):
-        assert should_replace_model(old_f1=None, new_f1=0.0) is True
-
-    def test_strictly_better_replaces(self):
-        assert should_replace_model(old_f1=0.5, new_f1=0.9) is True
-
-    def test_equal_replaces(self):
-        # Politique : >= (not just >). Egalite acceptable.
-        assert should_replace_model(old_f1=0.7, new_f1=0.7) is True
-
-    def test_strictly_worse_keeps_old(self):
-        assert should_replace_model(old_f1=0.9, new_f1=0.5) is False
-
     def test_feedback_with_missing_profile_is_ignored(self):
         catalog = [_ex(1)]
         vocab = derive_vocab(catalog)
@@ -294,3 +176,166 @@ class TestShouldReplaceModel:
         )
 
         assert len(df) == 0
+
+
+def _mini_catalog(n: int = 8) -> list[Exercise]:
+    categories = ["cardio", "strength"]
+    difficulties = ["beginner", "intermediate", "advanced"]
+    equipments = [["none"], ["dumbbells"], ["barbell", "rack"]]
+    muscles = [["chest"], ["quadriceps"], ["glutes"], ["lower_back"]]
+    return [
+        Exercise(
+            id=i,
+            name=f"ex-{i}",
+            target_muscles=muscles[i % len(muscles)],
+            equipment=equipments[i % len(equipments)],
+            difficulty=difficulties[i % len(difficulties)],
+            category=categories[i % len(categories)],
+        )
+        for i in range(1, n + 1)
+    ]
+
+
+@pytest.fixture()
+def base_csv(tmp_path: Path) -> Path:
+    df = build_dataset(_mini_catalog(8), n_profiles=40, seed=42)
+    path = tmp_path / "scoring_dataset.csv"
+    df.to_csv(path, index=False)
+    return path
+
+
+class TestRetrainAndMaybeReplace:
+    def test_first_run_without_old_model_writes_pickle_and_returns_replaced_true(
+        self, base_csv: Path, tmp_path: Path
+    ):
+        model_path = tmp_path / "scoring_model.pkl"
+        report_path = tmp_path / "retrain_report.json"
+        assert not model_path.exists()
+
+        report = retrain_and_maybe_replace(
+            base_csv=base_csv,
+            feedback_rows=pd.DataFrame(),
+            model_path=model_path,
+            report_path=report_path,
+        )
+
+        assert report["replaced"] is True
+        assert model_path.exists()
+        bundle = joblib.load(model_path)
+        assert set(bundle) == {"model", "vocab", "feature_columns"}
+
+    def test_non_empty_feedback_rows_get_concatenated_into_training_set(
+        self, base_csv: Path, tmp_path: Path
+    ):
+        # build_feedback_rows garantit que les colonnes restent alignees avec le vocab du base_csv.
+        catalog = _mini_catalog(8)
+        vocab = derive_vocab(catalog)
+        feedbacks = [
+            {"user_id": "u1", "program_id": "p1", "exercise_id": 1, "feedback_score": 5},
+            {"user_id": "u2", "program_id": "p2", "exercise_id": 2, "feedback_score": 4},
+        ]
+        feedback_rows = build_feedback_rows(
+            feedbacks=feedbacks,
+            profiles_by_user={"u1": _profile(), "u2": _profile()},
+            catalog_by_id={ex.id: ex for ex in catalog},
+            vocab=vocab,
+        )
+
+        report = retrain_and_maybe_replace(
+            base_csv=base_csv,
+            feedback_rows=feedback_rows,
+            model_path=tmp_path / "scoring_model.pkl",
+            report_path=tmp_path / "retrain_report.json",
+        )
+
+        assert report["n_feedback_used"] == 2
+
+    def test_empty_feedback_falls_back_to_base_dataset_without_crash(
+        self, base_csv: Path, tmp_path: Path
+    ):
+        report = retrain_and_maybe_replace(
+            base_csv=base_csv,
+            feedback_rows=pd.DataFrame(),
+            model_path=tmp_path / "scoring_model.pkl",
+            report_path=tmp_path / "retrain_report.json",
+        )
+
+        assert report["n_feedback_used"] == 0
+        assert isinstance(report["new_f1"], float)
+
+    def test_report_has_required_keys_and_persists_as_json(
+        self, base_csv: Path, tmp_path: Path
+    ):
+        report_path = tmp_path / "retrain_report.json"
+        report = retrain_and_maybe_replace(
+            base_csv=base_csv,
+            feedback_rows=pd.DataFrame(),
+            model_path=tmp_path / "scoring_model.pkl",
+            report_path=report_path,
+        )
+
+        expected = {"old_f1", "new_f1", "old_r2", "new_r2", "replaced", "n_feedback_used"}
+        assert set(report) == expected
+        # Persiste un JSON parsable avec les memes cles.
+        import json
+
+        on_disk = json.loads(report_path.read_text())
+        assert set(on_disk) == expected
+
+    def test_pipeline_keeps_pickle_when_replacement_policy_rejects(
+        self, base_csv: Path, tmp_path: Path, monkeypatch
+    ):
+        from app.services import scoring_retrainer
+
+        model_path = tmp_path / "scoring_model.pkl"
+        report_path = tmp_path / "retrain_report.json"
+
+        # 1er run : initialise le pickle.
+        retrain_and_maybe_replace(base_csv, pd.DataFrame(), model_path, report_path)
+        original_bytes = model_path.read_bytes()
+
+        # 2e run : on force la decision a "ne pas remplacer".
+        monkeypatch.setattr(
+            scoring_retrainer, "should_replace_model", lambda old, new: False
+        )
+        report = retrain_and_maybe_replace(
+            base_csv, pd.DataFrame(), model_path, report_path
+        )
+
+        assert report["replaced"] is False
+        assert model_path.read_bytes() == original_bytes
+
+    def test_old_model_with_mismatching_feature_columns_is_treated_as_first_run(
+        self, base_csv: Path, tmp_path: Path
+    ):
+        # 1er run : initialise un pickle dont on va ensuite corrompre les feature_columns.
+        model_path = tmp_path / "scoring_model.pkl"
+        report_path = tmp_path / "retrain_report.json"
+        retrain_and_maybe_replace(base_csv, pd.DataFrame(), model_path, report_path)
+        bundle = joblib.load(model_path)
+        bundle["feature_columns"] = ["col_inconnue_qui_ne_matche_pas"]
+        joblib.dump(bundle, model_path)
+
+        report = retrain_and_maybe_replace(
+            base_csv, pd.DataFrame(), model_path, report_path
+        )
+
+        # vocab incompatible : on traite comme un premier run (old_f1/r2 = None, replaced = True).
+        assert report["old_f1"] is None
+        assert report["old_r2"] is None
+        assert report["replaced"] is True
+
+
+class TestShouldReplaceModel:
+    def test_no_old_model_means_replace(self):
+        assert should_replace_model(old_f1=None, new_f1=0.0) is True
+
+    def test_strictly_better_replaces(self):
+        assert should_replace_model(old_f1=0.5, new_f1=0.9) is True
+
+    def test_equal_replaces(self):
+        # Politique : >= (not just >). Egalite acceptable.
+        assert should_replace_model(old_f1=0.7, new_f1=0.7) is True
+
+    def test_strictly_worse_keeps_old(self):
+        assert should_replace_model(old_f1=0.9, new_f1=0.5) is False

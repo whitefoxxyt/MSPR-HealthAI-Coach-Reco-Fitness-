@@ -8,6 +8,7 @@ from pathlib import Path
 import joblib
 import numpy as np
 import pandas as pd
+from pymongo.database import Database
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import r2_score
 
@@ -70,7 +71,7 @@ def _profile_from_doc(doc: dict) -> FitnessProfileRequest:
     )
 
 
-def load_feedbacks_from_mongo(db) -> list[dict]:
+def load_feedbacks_from_mongo(db: Database) -> list[dict]:
     """Charge les feedbacks granulaires (avec exercise_id non null) de recommendation_history."""
     return list(
         db[HISTORY_COLLECTION].find(
@@ -78,7 +79,6 @@ def load_feedbacks_from_mongo(db) -> list[dict]:
             {
                 "_id": 0,
                 "user_id": 1,
-                "program_id": 1,
                 "exercise_id": 1,
                 "feedback_score": 1,
             },
@@ -87,7 +87,7 @@ def load_feedbacks_from_mongo(db) -> list[dict]:
 
 
 def load_profiles_from_mongo(
-    db, user_ids: list[str]
+    db: Database, user_ids: list[str]
 ) -> dict[str, FitnessProfileRequest]:
     """Charge les profils fitness des utilisateurs en parametre, indexes par user_id."""
     if not user_ids:

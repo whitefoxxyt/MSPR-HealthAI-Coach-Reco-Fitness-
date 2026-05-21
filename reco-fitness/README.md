@@ -82,6 +82,8 @@ Le script :
 
 Si la collection `recommendation_history` est vide, le script tombe automatiquement sur le dataset synthetique seul (`n_feedback_used=0`).
 
+> Pre-requis : si le catalogue `exercises` en PG a evolue depuis la generation du dataset de base (nouveau muscle, equipement, categorie...), regenere d'abord `scoring_dataset.csv` via `python scripts/generate_training_data.py`. Sinon les colonnes encodees des feedbacks et du dataset peuvent diverger et provoquer des NaN dans le set d'entrainement.
+
 Frequence recommandee : **mensuelle**, manuellement ou via un cron (la decision operationnelle sort du scope MSPR2). Argument soutenance : l'architecture supporte l'amelioration continue du modele a partir des feedbacks utilisateurs reels.
 
 ## Evaluer le moteur (RF-14)
