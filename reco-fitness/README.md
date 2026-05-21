@@ -43,6 +43,37 @@ Artefacts produits :
 
 Cible PRD : F1 > 0.7 sur le jeu de test. Hyperparametres : `n_estimators=200, max_depth=15, random_state=42`, split 60/20/20.
 
+### Evaluer le moteur (RF-14)
+
+```bash
+# Catalogue PostgreSQL (par defaut)
+python scripts/eval_metrics.py
+
+# Catalogue synthetique offline (utile sans BDD)
+python scripts/eval_metrics.py --synthetic 70 --n-profiles 120 --seed 42 --out docs
+```
+
+Le dernier `docs/metrics.{json,md}` commit a ete genere avec la deuxieme commande (catalogue synthetique reproductible offline).
+
+Sortie sous `docs/` :
+- `docs/metrics.json` — valeurs brutes versionnables (livrable jury)
+- `docs/metrics.md` — rendu Markdown (sections classifier, contraintes, couverture, diversite, IoU, latence, HITL)
+- `docs/metrics/confusion_matrix.png`, `latency_boxplot.png`, `iou_heatmap.png`
+
+Le script entraine un RandomForest ephemere a chaque run (`tempfile.TemporaryDirectory` -- aucun artefact intermediaire commit). Commande unique, totalement reproductible via le `--seed`.
+
+7 metriques calculees (cf PRD livrable IV) :
+
+| # | Metrique | Cible |
+|---|----------|-------|
+| 1 | F1 ML classifier (`score > 0.5`) | > 0.8 |
+| 2 | Taux de violation des contraintes dures | 0 % |
+| 3 | Couverture des objectifs (4 health goals) | > 80 % chacun |
+| 4 | Diversite Jaccard (2 programmes consecutifs) | < 0.5 |
+| 5 | IoU rule-based vs ML (top-10) | 0.6 - 0.8 |
+| 6 | Latence p50 / p95 sur `recommend_premium` | < 200 / < 500 ms |
+| 7 | HITL coherence 1-5 (saisi manuellement) | > 3.8/5 |
+
 ### Lancer les tests
 
 ```bash

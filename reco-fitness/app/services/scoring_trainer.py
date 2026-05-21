@@ -36,7 +36,7 @@ def _vocab_from_columns(df: pd.DataFrame) -> Vocab:
     )
 
 
-def _split_60_20_20(
+def split_60_20_20(
     X: np.ndarray, y: np.ndarray, random_state: int
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     X_train, X_temp, y_train, y_temp = train_test_split(
@@ -70,7 +70,7 @@ def train_and_persist(
     X = df[feature_columns].to_numpy()
     y = df["label"].to_numpy()
 
-    X_train, X_val, X_test, y_train, y_val, y_test = _split_60_20_20(X, y, random_state=42)
+    X_train, X_val, X_test, y_train, y_val, y_test = split_60_20_20(X, y, random_state=42)
 
     model = RandomForestRegressor(n_estimators=200, max_depth=15, random_state=42)
     model.fit(X_train, y_train)

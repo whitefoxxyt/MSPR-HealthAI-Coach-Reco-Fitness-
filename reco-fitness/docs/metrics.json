@@ -1,0 +1,25 @@
+{
+  "classifier_f1": 0.9784454604833442,
+  "confusion_matrix": {
+    "tp": 1498,
+    "fp": 44,
+    "fn": 22,
+    "tn": 116
+  },
+  "constraint_violation_rate": 0.0,
+  "goal_coverage": {
+    "fat_loss": 1.0,
+    "muscle_strength": 0.9857142857142858,
+    "endurance": 0.9428571428571428,
+    "general_health": 1.0
+  },
+  "diversity_jaccard": 0.786902545005728,
+  "iou_rule_vs_ml": 0.5436870727311903,
+  "latency_p50_ms": 187.58898149985725,
+  "latency_p95_ms": 410.2023817997861,
+  "n_programs": 120,
+  "seed": 42,
+  "catalog_size": 70,
+  "hitl_methodology": "Tirage aleatoire de 20 programmes parmi ceux generes (metrics.json -> champ `programs`). Chaque programme est note 1-5 sur la coherence (adequation goal/level/equipement, progression, varietes muscles travailles) par 2 evaluateurs independants. Score retenu = moyenne des 2.",
+  "hitl_target_mean": 3.8
+}

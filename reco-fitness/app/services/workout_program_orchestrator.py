@@ -82,7 +82,7 @@ def _structure_program(
     )
 
 
-def _passes_hard_filters(exercise: Exercise, profile: FitnessProfileRequest) -> bool:
+def passes_hard_filters(exercise: Exercise, profile: FitnessProfileRequest) -> bool:
     """Ecarte un exercice qui touche une limitation ou requiert un equipement absent."""
     limitations = set(profile.limitations)
     if limitations & set(exercise.target_muscles):
@@ -129,7 +129,7 @@ def recommend_free(
 ) -> WorkoutProgram:
     """Tier free : scoring rule-based seul, programme de 2 semaines."""
     sessions_per_week, exercises_per_session, _ = _shape_for(profile.health_goal_fitness)
-    eligible = [ex for ex in catalog if _passes_hard_filters(ex, profile)]
+    eligible = [ex for ex in catalog if passes_hard_filters(ex, profile)]
     ranked = sorted(
         eligible,
         key=lambda ex: score_rule_based(ex, profile, history),
@@ -150,7 +150,7 @@ def _hybrid_ranked(
     catalog: list[Exercise],
 ) -> list[Exercise]:
     """Top-N rule-based ∪ Top-N ML, fusionnes par rang (filtre dur applique en amont)."""
-    eligible = [ex for ex in catalog if _passes_hard_filters(ex, profile)]
+    eligible = [ex for ex in catalog if passes_hard_filters(ex, profile)]
     top_rule_based = sorted(
         eligible,
         key=lambda ex: score_rule_based(ex, profile, history),
