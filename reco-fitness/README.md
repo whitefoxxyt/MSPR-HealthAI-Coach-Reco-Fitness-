@@ -60,6 +60,30 @@ Artefacts produits :
 
 Cible PRD : F1 > 0.7 sur le jeu de test. Hyperparametres : `n_estimators=200, max_depth=15, random_state=42`, split 60/20/20.
 
+## Re-entrainer avec les feedbacks utilisateurs (RF-15)
+
+```bash
+# Re-entraine sur (dataset synthetique + feedbacks reels accumules en Mongo)
+python scripts/retrain_scoring_model.py
+```
+
+Le script :
+- Lit le dataset de base `data/training/scoring_dataset.csv` (genere via `generate_training_data.py`).
+- Charge les feedbacks granulaires (`exercise_id` non null) de la collection `recommendation_history` et les profils correspondants depuis `user_fitness_profiles`.
+- Encode chaque feedback en une ligne `(exercise, profile)` avec `label = feedback_score / 5.0` puis concatene au dataset de base.
+- Re-entraine un RandomForestRegressor avec les memes hyperparametres que `train_scoring_model.py` (`n_estimators=200, max_depth=15, random_state=42`, split 60/20/20).
+- Charge le pickle courant `app/data/scoring_model.pkl` et l'evalue sur le meme jeu de test.
+- Remplace le pickle uniquement si `new_f1 >= old_f1`, sinon conserve l'ancien et journalise un warning.
+- Ecrit le rapport structure dans `data/training/retrain_report.json` (et le print sur stdout) :
+  ```json
+  { "old_f1": 0.842, "new_f1": 0.851, "old_r2": 0.78, "new_r2": 0.79,
+    "replaced": true, "n_feedback_used": 142 }
+  ```
+
+Si la collection `recommendation_history` est vide, le script tombe automatiquement sur le dataset synthetique seul (`n_feedback_used=0`).
+
+Frequence recommandee : **mensuelle**, manuellement ou via un cron (la decision operationnelle sort du scope MSPR2). Argument soutenance : l'architecture supporte l'amelioration continue du modele a partir des feedbacks utilisateurs reels.
+
 ## Evaluer le moteur (RF-14)
 
 ```bash
