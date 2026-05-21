@@ -36,7 +36,9 @@ class TestTierFree:
     @respx.mock
     async def test_returns_free_tier(self):
         respx.get(ENTITLEMENTS_URL).mock(
-            return_value=httpx.Response(200, json={"tier": "free", "expires_at": None, "features": []})
+            return_value=httpx.Response(
+                200, json={"tier": "free", "expires_at": None, "features": []}
+            )
         )
         result = await get_entitlements(FAKE_USER_ID, FAKE_JWT)
         assert result.tier == "free"
@@ -82,7 +84,9 @@ class TestCache:
     @respx.mock
     async def test_cache_hit_does_not_call_api_twice(self):
         route = respx.get(ENTITLEMENTS_URL).mock(
-            return_value=httpx.Response(200, json={"tier": "premium", "expires_at": None, "features": []})
+            return_value=httpx.Response(
+                200, json={"tier": "premium", "expires_at": None, "features": []}
+            )
         )
         await get_entitlements(FAKE_USER_ID, FAKE_JWT)
         await get_entitlements(FAKE_USER_ID, FAKE_JWT)
@@ -95,7 +99,9 @@ class TestCache:
         short_cache: TTLCache = TTLCache(maxsize=10000, ttl=1)
 
         route = respx.get(ENTITLEMENTS_URL).mock(
-            return_value=httpx.Response(200, json={"tier": "free", "expires_at": None, "features": []})
+            return_value=httpx.Response(
+                200, json={"tier": "free", "expires_at": None, "features": []}
+            )
         )
 
         with patch("app.services.entitlements_client._cache", short_cache):
@@ -140,7 +146,9 @@ class TestDegrademalformedResponse:
     @respx.mock
     async def test_unknown_tier_defaults_to_free(self):
         respx.get(ENTITLEMENTS_URL).mock(
-            return_value=httpx.Response(200, json={"tier": "ultra_vip", "expires_at": None, "features": []})
+            return_value=httpx.Response(
+                200, json={"tier": "ultra_vip", "expires_at": None, "features": []}
+            )
         )
         result = await get_entitlements(FAKE_USER_ID, FAKE_JWT)
         assert result.tier == "free"

@@ -66,7 +66,7 @@ def client(mongo_test_db):
     from app.dependencies import get_db
     from app.main import app
 
-    test_motor_client = AsyncIOMotorClient(mongo_test_db)
+    test_motor_client = AsyncIOMotorClient(mongo_test_db, tz_aware=True)
     test_db = test_motor_client["reco_fitness_test"]
     sync_client = MongoClient(mongo_test_db)
     sync_db = sync_client["reco_fitness_test"]

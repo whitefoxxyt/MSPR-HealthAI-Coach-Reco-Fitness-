@@ -117,9 +117,27 @@ class TestCache:
 class TestFilters:
     def _rows(self):
         return [
-            _make_orm(id=1, difficulty="beginner", target_muscles=["chest"], equipment=["none"], category="upper"),
-            _make_orm(id=2, difficulty="advanced", target_muscles=["back"], equipment=["barbell"], category="upper"),
-            _make_orm(id=3, difficulty="beginner", target_muscles=["legs"], equipment=["none"], category="lower"),
+            _make_orm(
+                id=1,
+                difficulty="beginner",
+                target_muscles=["chest"],
+                equipment=["none"],
+                category="upper",
+            ),
+            _make_orm(
+                id=2,
+                difficulty="advanced",
+                target_muscles=["back"],
+                equipment=["barbell"],
+                category="upper",
+            ),
+            _make_orm(
+                id=3,
+                difficulty="beginner",
+                target_muscles=["legs"],
+                equipment=["none"],
+                category="lower",
+            ),
         ]
 
     def test_filter_by_difficulty(self):

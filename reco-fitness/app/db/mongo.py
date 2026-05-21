@@ -8,7 +8,9 @@ _client: AsyncIOMotorClient | None = None
 def get_mongo_client() -> AsyncIOMotorClient:
     global _client
     if _client is None:
-        _client = AsyncIOMotorClient(settings.MONGO_URI)
+        # tz_aware=True : BSON stocke des datetimes sans tz, on les recoit en UTC
+        # explicite cote app pour eviter les ambiguites de serialisation JSON.
+        _client = AsyncIOMotorClient(settings.MONGO_URI, tz_aware=True)
     return _client
 
 

@@ -48,25 +48,26 @@ def mongo_test_db():
 def client(mongo_test_db):
     """Client FastAPI avec MongoDB pointe vers le container de test."""
     from motor.motor_asyncio import AsyncIOMotorClient
+    from pymongo import MongoClient
 
+    from app.dependencies import get_db
     from app.main import app
 
-    test_motor_client = AsyncIOMotorClient(mongo_test_db)
+    test_motor_client = AsyncIOMotorClient(mongo_test_db, tz_aware=True)
     test_db = test_motor_client["reco_fitness_test"]
+    sync_client = MongoClient(mongo_test_db)
+    sync_db = sync_client["reco_fitness_test"]
 
-    with (
-        patch("app.dependencies.get_db", return_value=test_db),
-        patch("app.services.jwt_decoder.settings") as mock_settings,
-    ):
+    app.dependency_overrides[get_db] = lambda: test_db
+
+    with patch("app.services.jwt_decoder.settings") as mock_settings:
         mock_settings.BETTER_AUTH_SECRET = TEST_SECRET
         with TestClient(app, raise_server_exceptions=True) as c:
             yield c
 
-    # Nettoyage apres chaque test
-    import asyncio
-    asyncio.get_event_loop().run_until_complete(
-        test_db["user_fitness_profiles"].drop()
-    )
+    app.dependency_overrides.clear()
+    sync_db["user_fitness_profiles"].drop()
+    sync_client.close()
     test_motor_client.close()
 
 
@@ -99,7 +100,11 @@ class TestFitnessProfileCRUD:
     def test_second_put_updates_profile(self, client):
         user_id = "u-update"
         client.put("/api/v1/fitness-profile/me", json=VALID_PAYLOAD, headers=_auth(user_id))
-        updated = {**VALID_PAYLOAD, "health_goal_fitness": "endurance", "experience_level": "advanced"}
+        updated = {
+            **VALID_PAYLOAD,
+            "health_goal_fitness": "endurance",
+            "experience_level": "advanced",
+        }
         response = client.put("/api/v1/fitness-profile/me", json=updated, headers=_auth(user_id))
         assert response.status_code == 200
         data = response.json()
@@ -119,7 +124,9 @@ class TestFitnessProfileCRUD:
         user_b = "u-attacker"
         client.put("/api/v1/fitness-profile/me", json=VALID_PAYLOAD, headers=_auth(user_a))
         # user_b fait un PUT sur /me -- il ne peut modifier que le sien
-        response = client.put("/api/v1/fitness-profile/me", json=VALID_PAYLOAD, headers=_auth(user_b))
+        response = client.put(
+            "/api/v1/fitness-profile/me", json=VALID_PAYLOAD, headers=_auth(user_b)
+        )
         assert response.status_code == 200
         assert response.json()["user_id"] == user_b
 
