@@ -8,7 +8,7 @@ from app.config import settings
 from app.db.mongo import check_mongo
 from app.db.session import engine
 
-router = APIRouter(tags=["Health"])
+router = APIRouter(tags=["Sante"])
 
 
 def _check_postgres() -> bool:
@@ -20,9 +20,16 @@ def _check_postgres() -> bool:
         return False
 
 
-@router.get("/health", summary="Health check")
+@router.get("/health", summary="Health check du service")
 async def health_check():
-    """Verifie la disponibilite de PostgreSQL, MongoDB et MSPR-AUTH."""
+    """
+    Verifie la disponibilite des trois dependances : PostgreSQL (catalogue),
+    MongoDB (profils + programmes), MSPR-AUTH (entitlements).
+
+    Toujours 200 (jamais 503) pour ne pas casser les orchestrateurs : le champ
+    `status` vaut `ok` si tout repond, `degraded` si au moins une dependance est
+    injoignable. Cible des sondes liveness/readiness Kubernetes.
+    """
     postgres_ok = _check_postgres()
     mongo_ok = await check_mongo()
     auth_ok = await _check_auth()

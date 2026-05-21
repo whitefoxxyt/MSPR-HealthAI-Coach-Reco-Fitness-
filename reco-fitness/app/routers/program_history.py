@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.dependencies import get_current_user, get_db
+from app.openapi_responses import auth_responses
 from app.schemas.program_history import (
     PaginatedFeedbackResponse,
     PaginatedProgramsResponse,
@@ -12,7 +13,7 @@ from app.schemas.program_history import (
 from app.services import program_history_service as svc
 from app.services.jwt_decoder import UserIdentity
 
-router = APIRouter(tags=["Program History"])
+router = APIRouter(tags=["Historique"], responses=auth_responses())
 
 CurrentUser = Annotated[UserIdentity, Depends(get_current_user)]
 MongoDB = Annotated[AsyncIOMotorDatabase, Depends(get_db)]

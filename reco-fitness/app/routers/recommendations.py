@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from slowapi import Limiter
@@ -12,6 +12,11 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db as get_pg_db
 from app.dependencies import bearer_scheme, get_current_user, get_db
+from app.openapi_responses import (
+    RATE_LIMITED,
+    SERVICE_UNAVAILABLE,
+    auth_responses,
+)
 from app.schemas.recommendations import (
     ExerciseInProgram,
     RecommendationRequest,
@@ -42,7 +47,11 @@ def _user_id_from_request(request: Request) -> str:
 
 limiter = Limiter(key_func=_user_id_from_request)
 
-router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
+router = APIRouter(
+    prefix="/recommendations",
+    tags=["Recommandations"],
+    responses=auth_responses(),
+)
 
 CurrentUser = Annotated[UserIdentity, Depends(get_current_user)]
 BearerCreds = Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)]
@@ -50,6 +59,17 @@ MongoDB = Annotated[AsyncIOMotorDatabase, Depends(get_db)]
 PgSession = Annotated[Session, Depends(get_pg_db)]
 
 COLLECTION = "workout_programs"
+
+RECOMMENDATION_EXAMPLES = {
+    "default": {
+        "summary": "Requete standard (rien a fournir)",
+        "description": (
+            "Le corps est vide : tous les parametres sont lus depuis le profil "
+            "Mongo de l'utilisateur authentifie et le tier renvoye par MSPR-AUTH."
+        ),
+        "value": {},
+    },
+}
 
 
 def _read_biometrics(
@@ -82,15 +102,28 @@ def _exercise_to_schema(ex: Exercise) -> ExerciseInProgram:
     "",
     response_model=WorkoutProgramResponse,
     summary="Generer un programme d'entrainement personnalise",
+    responses={
+        **RATE_LIMITED,
+        **SERVICE_UNAVAILABLE,
+        409: {
+            "description": (
+                "Aucun exercice du catalogue ne passe les filtres durs "
+                "(limitations ou equipement trop restrictifs)."
+            )
+        },
+    },
 )
 @limiter.limit("10/hour;3/minute")
 async def post_recommendation(
     request: Request,
-    payload: RecommendationRequest,
     current_user: CurrentUser,
     credentials: BearerCreds,
     db: MongoDB,
     pg_session: PgSession,
+    payload: RecommendationRequest = Body(
+        default_factory=RecommendationRequest,
+        openapi_examples=RECOMMENDATION_EXAMPLES,
+    ),
 ) -> WorkoutProgramResponse:
     """
     Genere un programme personnalise selon le tier de l'utilisateur :
