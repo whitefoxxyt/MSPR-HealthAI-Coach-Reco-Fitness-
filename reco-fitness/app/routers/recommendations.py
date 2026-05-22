@@ -113,7 +113,7 @@ def _exercise_to_schema(ex: Exercise) -> ExerciseInProgram:
         },
     },
 )
-@limiter.limit("10/hour;3/minute")
+@limiter.limit("30/hour;10/minute")
 async def post_recommendation(
     request: Request,
     current_user: CurrentUser,

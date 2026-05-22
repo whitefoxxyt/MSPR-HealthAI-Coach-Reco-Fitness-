@@ -285,29 +285,29 @@ class TestPostRecommendationsPremiumPlus:
 class TestPostRecommendationsRateLimit:
     def test_returns_429_when_exceeding_per_minute_limit(self, client, mock_auth_free):
         """
-        Le PRD impose 10/heure ET 3/minute. La limite minute se declenche en premier,
-        validant la mecanique : 4eme appel rapide depuis le meme user_id -> 429.
+        Limite 30/heure ET 10/minute. La limite minute se declenche en premier,
+        validant la mecanique : 11eme appel rapide depuis le meme user_id -> 429.
         """
         c, test_db = client
         user_id = "u-ratelimit-1"
         _seed_profile(test_db, user_id)
 
-        for _ in range(3):
+        for _ in range(10):
             response = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
             assert response.status_code == 200, response.text
 
-        fourth = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
-        assert fourth.status_code == 429
-        assert "rate limit" in fourth.text.lower() or "rate" in fourth.text.lower()
+        eleventh = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
+        assert eleventh.status_code == 429
+        assert "rate limit" in eleventh.text.lower() or "rate" in eleventh.text.lower()
 
     def test_returns_429_when_exceeding_per_hour_limit(self, client, mock_auth_free):
-        """11eme appel dans l'heure -> 429 (bucket minute reset pour isoler le bucket heure)."""
+        """31eme appel dans l'heure -> 429 (bucket minute reset pour isoler le bucket heure)."""
         c, test_db = client
         user_id = "u-ratelimit-2"
         _seed_profile(test_db, user_id)
 
-        # Pour isoler la limite 10/heure, on retire temporairement la limite minute
-        # en monkeypatchant la decoration du endpoint.
+        # Pour isoler la limite 30/heure, on retire temporairement la limite minute
+        # en clearant le bucket "minute" entre chaque appel.
         from app.routers import recommendations as reco_router
 
         # Reset les compteurs en ecrasant le storage du limiter
@@ -318,10 +318,7 @@ class TestPostRecommendationsRateLimit:
         with patch.object(
             reco_router.limiter, "enabled", True
         ):
-            # Patch la decoration pour ne garder que 10/hour
-            for i in range(10):
-                # Petit hack : attendre 21 secondes entre chaque rafale de 3 serait
-                # trop lent. Au lieu, on simule la fenetre en clearant le compteur "minute".
+            for i in range(30):
                 response = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
                 assert response.status_code == 200, f"appel {i + 1} : {response.text}"
                 # Reset uniquement le bucket minute, garde le bucket heure
@@ -331,5 +328,5 @@ class TestPostRecommendationsRateLimit:
                     for k in keys_to_drop:
                         del storage.storage[k]
 
-            eleventh = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
-            assert eleventh.status_code == 429, f"11eme appel : {eleventh.text}"
+            thirty_first = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
+            assert thirty_first.status_code == 429, f"31eme appel : {thirty_first.text}"

@@ -1,10 +1,11 @@
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from starlette.responses import Response
 
 from app.db.mongo import close_mongo
 from app.routers.fitness_profile import router as fitness_profile_router
@@ -13,6 +14,32 @@ from app.routers.program_history import router as program_history_router
 from app.routers.programs import router as programs_router
 from app.routers.recommendations import limiter
 from app.routers.recommendations import router as recommendations_router
+
+# CORS : origines front autorisees (dev local + container front).
+# Liste configurable via CORS_ALLOW_ORIGINS (separe par virgules).
+_cors_origins = [
+    o.strip()
+    for o in os.getenv(
+        "CORS_ALLOW_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
+    ).split(",")
+    if o.strip()
+]
+
+
+def _rate_limit_handler_with_cors(request: Request, exc: RateLimitExceeded) -> Response:
+    """Wrapper du handler slowapi qui ajoute les headers CORS sur la 429.
+
+    CORSMiddleware n'enveloppe pas les reponses emises par les exception handlers ;
+    sans ce wrapper, le navigateur affiche "CORS Failed" sur un 429 et masque
+    la vraie cause au front.
+    """
+    response = _rate_limit_exceeded_handler(request, exc)
+    origin = request.headers.get("origin", "")
+    if origin in _cors_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 API_V1_PREFIX = "/api/v1"
 
@@ -71,17 +98,11 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler_with_cors)
 
-# CORS : origines front autorisees (dev local + container front).
-# Liste configurable via CORS_ALLOW_ORIGINS (separe par virgules).
-_cors_origins = os.getenv(
-    "CORS_ALLOW_ORIGINS",
-    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173",
-).split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in _cors_origins if o.strip()],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
