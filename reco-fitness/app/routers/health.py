@@ -44,9 +44,11 @@ async def health_check():
 
 
 async def _check_auth() -> bool:
+    # MSPR-AUTH (better-auth) expose /api/auth/ok comme sonde de disponibilite,
+    # pas /health. Cf. issue de healthcheck Reco-Fitness post-integration MSPR2.
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
-            response = await client.get(f"{settings.AUTH_API_URL}/health")
+            response = await client.get(f"{settings.AUTH_API_URL}/api/auth/ok")
             return response.status_code == 200
     except Exception:
         return False
