@@ -8,9 +8,8 @@ Verifient les criteres d'acceptance de l'issue 27 :
 - codes d'erreur HTTP documentes (401, 404, 422, 429, 503)
 - /docs, /redoc, /openapi.json rendent sans erreur
 """
-from fastapi.testclient import TestClient
-
 from app.main import app
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 

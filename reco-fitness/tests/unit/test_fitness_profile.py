@@ -6,8 +6,6 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import HTTPException
-
 from app.schemas.fitness_profile import (
     ExperienceLevel,
     FitnessProfileRequest,
@@ -16,6 +14,7 @@ from app.schemas.fitness_profile import (
     SessionPreferences,
 )
 from app.services import fitness_profile_service as svc
+from fastapi import HTTPException
 
 
 def _make_payload(**kwargs) -> FitnessProfileRequest:

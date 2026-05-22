@@ -6,7 +6,6 @@ from pathlib import Path
 import joblib
 import pandas as pd
 import pytest
-
 from app.schemas.fitness_profile import (
     ExperienceLevel,
     FitnessProfileRequest,

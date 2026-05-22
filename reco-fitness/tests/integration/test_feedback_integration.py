@@ -47,11 +47,10 @@ def mongo_test_db():
 @pytest.fixture()
 def client(mongo_test_db):
     """Client FastAPI avec Mongo override + JWT secret mock."""
-    from motor.motor_asyncio import AsyncIOMotorClient
-    from pymongo import MongoClient
-
     from app.dependencies import get_db
     from app.main import app
+    from motor.motor_asyncio import AsyncIOMotorClient
+    from pymongo import MongoClient
 
     test_motor_client = AsyncIOMotorClient(mongo_test_db, tz_aware=True)
     test_db = test_motor_client["reco_fitness_test"]

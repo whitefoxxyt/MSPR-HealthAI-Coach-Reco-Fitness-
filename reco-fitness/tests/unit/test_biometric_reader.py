@@ -6,9 +6,8 @@ Les tests de la requete `get_recent` vivent dans tests/integration.
 from datetime import datetime, timezone
 
 import pytest
-from pydantic import ValidationError
-
 from app.services.biometric_reader import Biometric
+from pydantic import ValidationError
 
 
 class TestBiometricModel:

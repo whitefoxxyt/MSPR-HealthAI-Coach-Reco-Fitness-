@@ -6,7 +6,6 @@ que `get_recent` lit correctement la table `biometric_entries`.
 from datetime import datetime, timedelta, timezone
 
 import pytest
-
 from app.models.biometric import BiometricEntryORM
 from app.services.biometric_reader import Biometric, get_recent
 

@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from app.models.exercise import ExerciseORM
 from app.services.exercise_catalog import (
     Exercise,

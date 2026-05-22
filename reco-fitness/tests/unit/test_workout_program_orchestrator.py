@@ -1,6 +1,5 @@
 """Tests unitaires de l'orchestrateur de programmes d'entrainement (RF-10)."""
 import pytest
-
 from app.schemas.fitness_profile import (
     ExperienceLevel,
     FitnessProfileRequest,
