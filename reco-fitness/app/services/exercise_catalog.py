@@ -34,17 +34,28 @@ class ExerciseFilters:
 
 
 def _orm_to_dataclass(row: ExerciseORM) -> Exercise:
+    # difficulty, category, description, duration_seconds, calories_per_minute ne sont
+    # pas exposes par MSPR-DB (table exercises issue de l'ETL ExerciseDB). On utilise
+    # getattr pour rester tolerant aux mocks de tests qui peuvent les setter, et on
+    # fournit des defauts neutres en production (scoring rule-based + ML tolerent).
+    raw_instructions = getattr(row, "instructions", None)
+    if isinstance(raw_instructions, str):
+        instructions_list = [s.strip() for s in raw_instructions.split(".") if s.strip()]
+    elif isinstance(raw_instructions, list):
+        instructions_list = raw_instructions
+    else:
+        instructions_list = []
     return Exercise(
         id=row.id,
         name=row.name,
         target_muscles=row.target_muscles or [],
         equipment=row.equipment or [],
-        difficulty=row.difficulty,
-        category=row.category,
-        description=row.description,
-        instructions=row.instructions or [],
-        duration_seconds=row.duration_seconds,
-        calories_per_minute=row.calories_per_minute,
+        difficulty=getattr(row, "difficulty", None) or "beginner",
+        category=getattr(row, "category", None),
+        description=getattr(row, "description", None),
+        instructions=instructions_list,
+        duration_seconds=getattr(row, "duration_seconds", None),
+        calories_per_minute=getattr(row, "calories_per_minute", None),
         gif_url=row.gif_url,
     )
 

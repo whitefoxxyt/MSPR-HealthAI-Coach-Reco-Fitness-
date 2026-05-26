@@ -1,4 +1,4 @@
-from sqlalchemy import ARRAY, Column, Integer, String
+from sqlalchemy import ARRAY, Column, Integer, String, Text
 
 from app.db.session import Base
 
@@ -9,11 +9,8 @@ class ExerciseORM(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     target_muscles = Column(ARRAY(String), nullable=False, default=list)
-    equipment = Column(ARRAY(String), nullable=False, default=list)
-    difficulty = Column(String, nullable=False, default="beginner")
-    category = Column(String, nullable=True)
-    description = Column(String, nullable=True)
-    instructions = Column(ARRAY(String), nullable=True, default=list)
-    duration_seconds = Column(Integer, nullable=True)
-    calories_per_minute = Column(Integer, nullable=True)
+    # La colonne SQL s'appelle "equipments" (cf. MSPR-DB/migrations/V01__init_schema.sql).
+    # On expose l'attribut Python `equipment` pour rester aligne avec le reste du code.
+    equipment = Column("equipments", ARRAY(String), nullable=False, default=list)
+    instructions = Column(Text, nullable=True)
     gif_url = Column(String, nullable=True)
