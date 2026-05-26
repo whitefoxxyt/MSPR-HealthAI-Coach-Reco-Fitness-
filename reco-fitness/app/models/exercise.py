@@ -16,3 +16,4 @@ class ExerciseORM(Base):
     instructions = Column(ARRAY(String), nullable=True, default=list)
     duration_seconds = Column(Integer, nullable=True)
     calories_per_minute = Column(Integer, nullable=True)
+    gif_url = Column(String, nullable=True)

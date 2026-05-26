@@ -18,6 +18,7 @@ class ExerciseInProgram(BaseModel):
     equipment: list[str]
     difficulty: str
     category: str | None = None
+    gif_url: str | None = None
 
 
 class WorkoutProgramResponse(BaseModel):

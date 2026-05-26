@@ -95,6 +95,7 @@ def _exercise_to_schema(ex: Exercise) -> ExerciseInProgram:
         equipment=ex.equipment,
         difficulty=ex.difficulty,
         category=ex.category,
+        gif_url=ex.gif_url,
     )
 
 

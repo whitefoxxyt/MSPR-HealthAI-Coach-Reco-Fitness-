@@ -22,6 +22,7 @@ class Exercise:
     instructions: list[str] = field(default_factory=list)
     duration_seconds: int | None = None
     calories_per_minute: int | None = None
+    gif_url: str | None = None
 
 
 @dataclass
@@ -44,6 +45,7 @@ def _orm_to_dataclass(row: ExerciseORM) -> Exercise:
         instructions=row.instructions or [],
         duration_seconds=row.duration_seconds,
         calories_per_minute=row.calories_per_minute,
+        gif_url=row.gif_url,
     )
 
 
