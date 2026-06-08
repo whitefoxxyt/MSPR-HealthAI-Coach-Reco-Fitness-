@@ -176,8 +176,16 @@ async def post_recommendation(
         "duration_weeks": program.duration_weeks,
         "scoring_strategy": program.scoring_strategy,
         "tier_at_generation": entitlements.tier,
-        "health_goal_at_generation": profile.health_goal_fitness.value if profile and profile.health_goal_fitness else None,
-        "duration_min_per_session": profile.preferences.duration_min_per_session if profile and profile.preferences else None,
+        "health_goal_at_generation": (
+            profile.health_goal_fitness.value
+            if profile and profile.health_goal_fitness
+            else None
+        ),
+        "duration_min_per_session": (
+            profile.preferences.duration_min_per_session
+            if profile and profile.preferences
+            else None
+        ),
         "weeks": weeks_serialized,
         "created_at": now,
     }

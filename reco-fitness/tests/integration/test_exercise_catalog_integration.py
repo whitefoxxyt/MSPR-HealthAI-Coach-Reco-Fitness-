@@ -56,7 +56,13 @@ def reset_cache():
 # Helpers
 # ------------------------------------------------------------
 
-_NON_ORM_FIELDS = {"difficulty", "category", "description", "duration_seconds", "calories_per_minute"}
+_NON_ORM_FIELDS = {
+    "difficulty",
+    "category",
+    "description",
+    "duration_seconds",
+    "calories_per_minute",
+}
 
 
 def _insert_exercise(db: Session, **kwargs) -> ExerciseORM:
