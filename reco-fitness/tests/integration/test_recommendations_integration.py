@@ -255,10 +255,10 @@ class TestPostRecommendationsPremiumPlus:
         body = response.json()
         assert body["tier_at_generation"] == "premium_plus"
         assert body["scoring_strategy"] == "hybrid_rank_fusion"
-        # PROFILE_DOC.health_goal_fitness=fat_loss -> 4 seances/sem nominal
-        # avg_heart_rate_bpm=90 (>80) -> -1 seance -> 3 seances/sem
+        # PROFILE_DOC.preferences.sessions_per_week=3 -> 3 seances/sem nominal
+        # avg_heart_rate_bpm=90 (>80) -> -1 seance -> 2 seances/sem
         for week in body["weeks"]:
-            assert len(week) == 3
+            assert len(week) == 2
         reader_mock.assert_called_once()
 
     def test_premium_plus_without_biometric_keeps_base_sessions(self, client, mock_auth_tier):
@@ -277,9 +277,9 @@ class TestPostRecommendationsPremiumPlus:
         assert response.status_code == 200, response.text
         body = response.json()
         assert body["tier_at_generation"] == "premium_plus"
-        # fat_loss premium duration_weeks=4, 4 seances/sem nominales
+        # fat_loss premium duration_weeks=4 ; seances/sem = preferences (3)
         for week in body["weeks"]:
-            assert len(week) == 4
+            assert len(week) == 3
 
 
 @pytest.mark.integration

@@ -31,13 +31,42 @@ class WorkoutProgram:
 
 
 # Mapping goal -> (sessions_per_week, exercises_per_session, premium_duration_weeks)
-# Free force toujours duration_weeks=2 (cf PRD Q4).
+# Free force toujours duration_weeks=2 (cf PRD Q4). sessions et exercices ne
+# servent que de repli : les preferences du profil (sessions_per_week,
+# duration_min_per_session) priment quand elles sont presentes.
 _GOAL_SHAPE: dict[str, tuple[int, int, int]] = {
     "fat_loss": (4, 8, 4),
     "muscle_strength": (4, 6, 6),
     "endurance": (5, 6, 6),
     "general_health": (3, 6, 4),
 }
+# ~12 min par exercice (echauffement, series, repos), bornes de securite.
+_MIN_EXERCISES_PER_SESSION = 3
+_MAX_EXERCISES_PER_SESSION = 8
+_MAX_SESSIONS_PER_WEEK = 7
+
+
+def _apply_preferences(
+    profile: FitnessProfileRequest,
+    sessions_per_week: int,
+    exercises_per_session: int,
+) -> tuple[int, int]:
+    """Le programme doit refleter ce que le profil affiche : seances/semaine
+    et duree de seance choisies par l'utilisateur, bornees."""
+    prefs = getattr(profile, "preferences", None)
+    if prefs is None:
+        return sessions_per_week, exercises_per_session
+    if prefs.sessions_per_week:
+        sessions_per_week = max(1, min(_MAX_SESSIONS_PER_WEEK, prefs.sessions_per_week))
+    if prefs.duration_min_per_session:
+        exercises_per_session = max(
+            _MIN_EXERCISES_PER_SESSION,
+            min(
+                _MAX_EXERCISES_PER_SESSION,
+                int(prefs.duration_min_per_session / 12 + 0.5),
+            ),
+        )
+    return sessions_per_week, exercises_per_session
 _FREE_DURATION_WEEKS = 2
 _TOP_N_CANDIDATES = 20
 # Poids de fusion : rule-based et ML pesent autant. Si besoin de tuning, deporter en data/.
@@ -220,6 +249,9 @@ def recommend_free(
     """Tier free : scoring rule-based seul, programme de 2 semaines."""
     profile = prepare_profile(profile)
     sessions_per_week, exercises_per_session, _ = _shape_for(profile.health_goal_fitness)
+    sessions_per_week, exercises_per_session = _apply_preferences(
+        profile, sessions_per_week, exercises_per_session
+    )
     eligible = [ex for ex in catalog if passes_hard_filters(ex, profile)]
     ranked = sorted(
         _shuffled(eligible, rng),
@@ -272,6 +304,9 @@ def recommend_premium(
     sessions_per_week, exercises_per_session, duration_weeks = _shape_for(
         profile.health_goal_fitness
     )
+    sessions_per_week, exercises_per_session = _apply_preferences(
+        profile, sessions_per_week, exercises_per_session
+    )
     return _structure_program(
         ranked=_hybrid_ranked(profile, history, catalog, rng),
         duration_weeks=duration_weeks,
@@ -310,6 +345,9 @@ def recommend_premium_plus(
     """
     base_sessions, exercises_per_session, duration_weeks = _shape_for(
         profile.health_goal_fitness
+    )
+    base_sessions, exercises_per_session = _apply_preferences(
+        profile, base_sessions, exercises_per_session
     )
     sessions_per_week = max(
         _MIN_SESSIONS_PER_WEEK,

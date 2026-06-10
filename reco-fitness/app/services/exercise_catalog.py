@@ -36,11 +36,51 @@ class ExerciseFilters:
     category: str | None = None
 
 
+# MSPR-DB n'expose ni category ni difficulty : avec des constantes ("beginner",
+# None), goal_match et level_match etaient identiques pour tous les exercices
+# et l'objectif sante n'influencait pas le classement. On derive donc :
+# - category depuis les muscles cibles (cardio vs strength)
+# - difficulty depuis l'equipement requis (heuristique simple, documentee)
+_BEGINNER_EQUIPMENT = {
+    "body weight",
+    "band",
+    "resistance band",
+    "stability ball",
+    "bosu ball",
+    "medicine ball",
+    "rope",
+    "roller",
+    "wheel roller",
+    "assisted",
+}
+_ADVANCED_EQUIPMENT = {
+    "barbell",
+    "ez barbell",
+    "olympic barbell",
+    "trap bar",
+    "weighted",
+}
+
+
+def _derive_category(target_muscles: list[str], body_parts: list[str]) -> str:
+    if "cardiovascular system" in target_muscles or "cardio" in body_parts:
+        return "cardio"
+    return "strength"
+
+
+def _derive_difficulty(equipment: list[str]) -> str:
+    eqs = {e for e in equipment if e != "none"}
+    if not eqs or eqs <= _BEGINNER_EQUIPMENT:
+        return "beginner"
+    if eqs & _ADVANCED_EQUIPMENT:
+        return "advanced"
+    return "intermediate"
+
+
 def _orm_to_dataclass(row: ExerciseORM) -> Exercise:
-    # difficulty, category, description, duration_seconds, calories_per_minute ne sont
-    # pas exposes par MSPR-DB (table exercises issue de l'ETL ExerciseDB). On utilise
-    # getattr pour rester tolerant aux mocks de tests qui peuvent les setter, et on
-    # fournit des defauts neutres en production (scoring rule-based + ML tolerent).
+    # description, duration_seconds, calories_per_minute ne sont pas exposes
+    # par MSPR-DB (table exercises issue de l'ETL ExerciseDB). On utilise
+    # getattr pour rester tolerant aux mocks de tests qui peuvent les setter.
     raw_instructions = getattr(row, "instructions", None)
     if isinstance(raw_instructions, str):
         instructions_list = [s.strip() for s in raw_instructions.split(".") if s.strip()]
@@ -48,19 +88,22 @@ def _orm_to_dataclass(row: ExerciseORM) -> Exercise:
         instructions_list = raw_instructions
     else:
         instructions_list = []
+    target_muscles = row.target_muscles or []
+    equipment = row.equipment or []
+    body_parts = getattr(row, "body_parts", None) or []
     return Exercise(
         id=row.id,
         name=row.name,
-        target_muscles=row.target_muscles or [],
-        equipment=row.equipment or [],
-        difficulty=getattr(row, "difficulty", None) or "beginner",
-        category=getattr(row, "category", None),
+        target_muscles=target_muscles,
+        equipment=equipment,
+        difficulty=getattr(row, "difficulty", None) or _derive_difficulty(equipment),
+        category=getattr(row, "category", None) or _derive_category(target_muscles, body_parts),
         description=getattr(row, "description", None),
         instructions=instructions_list,
         duration_seconds=getattr(row, "duration_seconds", None),
         calories_per_minute=getattr(row, "calories_per_minute", None),
         gif_url=row.gif_url,
-        body_parts=getattr(row, "body_parts", None) or [],
+        body_parts=body_parts,
     )
 
 

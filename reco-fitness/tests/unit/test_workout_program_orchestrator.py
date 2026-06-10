@@ -57,11 +57,11 @@ class TestRecommendFree:
         assert program.duration_weeks == 2
         assert program.scoring_strategy == "rule_based"
         assert len(program.weeks) == 2
-        # fat_loss -> 4 seances/sem, 8 ex/seance (mapping module)
+        # Preferences par defaut du profil : 3 seances/sem, 45 min -> 4 ex/seance
         for week in program.weeks:
-            assert len(week) == 4
+            assert len(week) == 3
             for session in week:
-                assert len(session) == 8
+                assert len(session) == 4
                 for exercise in session:
                     assert isinstance(exercise, Exercise)
 
@@ -256,14 +256,15 @@ class TestRecommendPremium:
 
         program = orchestrator.recommend_premium(profile, history=[], catalog=catalog)
 
-        # muscle_strength : 6 semaines, 4 seances/sem, 6 ex/seance (mapping module)
+        # muscle_strength : 6 semaines (mapping module). Seances et exercices
+        # suivent les preferences par defaut du profil : 3 seances, 4 ex.
         assert program.duration_weeks == 6
         assert program.scoring_strategy == "hybrid_rank_fusion"
         assert len(program.weeks) == 6
         for week in program.weeks:
-            assert len(week) == 4
+            assert len(week) == 3
             for session in week:
-                assert len(session) == 6
+                assert len(session) == 4
 
     def test_top_candidates_are_capped_at_twenty(self):
         # Catalogue de 100 ex. La fusion Top-N=20 ne peut selectionner qu'au plus
@@ -315,9 +316,9 @@ class TestRecommendPremiumPlus:
         )
 
         assert program.scoring_strategy == "hybrid_rank_fusion"
-        # muscle_strength : 4 seances/sem nominales
+        # Preferences par defaut : 3 seances/sem nominales
         for week in program.weeks:
-            assert len(week) == 4
+            assert len(week) == 3
 
     def test_high_avg_heart_rate_reduces_sessions_per_week_by_one(self):
         from datetime import datetime, timezone
@@ -344,9 +345,9 @@ class TestRecommendPremiumPlus:
             profile, history=[], catalog=catalog, biometrics=biometrics
         )
 
-        # muscle_strength nominal = 4 seances/sem, ici 3 (4 - 1)
+        # Preferences nominales = 3 seances/sem, ici 2 (3 - 1)
         for week in program.weeks:
-            assert len(week) == 3
+            assert len(week) == 2
 
     def test_at_threshold_avg_heart_rate_does_not_reduce_sessions(self):
         from datetime import datetime, timezone
@@ -373,7 +374,7 @@ class TestRecommendPremiumPlus:
         )
 
         for week in program.weeks:
-            assert len(week) == 4
+            assert len(week) == 3
 
     def test_missing_avg_heart_rate_does_not_reduce_sessions(self):
         from datetime import datetime, timezone
@@ -401,4 +402,4 @@ class TestRecommendPremiumPlus:
         )
 
         for week in program.weeks:
-            assert len(week) == 4
+            assert len(week) == 3

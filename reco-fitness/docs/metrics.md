@@ -9,10 +9,10 @@
 |----------|--------|-------|--------|
 | F1 classifier | 0.978 | > 0.8 | OK |
 | Violation contraintes | 0.0 % | 0 % | OK |
-| Couverture min (par goal) | 94.3 % | > 80 % | OK |
-| Diversite Jaccard | 0.787 | < 0.5 | a optimiser |
+| Couverture min (par goal) | 91.4 % | > 80 % | OK |
+| Diversite Jaccard | 0.790 | < 0.5 | a optimiser |
 | IoU rule-based vs ML | 0.544 | 0.6 - 0.8 | a optimiser |
-| Latence p50 / p95 | 187.6 / 410.2 ms | < 200 / < 500 ms | OK |
+| Latence p50 / p95 | 195.7 / 439.1 ms | < 200 / < 500 ms | OK |
 
 ## Classifier
 
@@ -31,7 +31,7 @@ Voir `metrics/confusion_matrix.png`.
 
 | Objectif | Couverture |
 |----------|-----------|
-| endurance | 94.3 % |
+| endurance | 91.4 % |
 | fat_loss | 100.0 % |
 | general_health | 100.0 % |
 | muscle_strength | 98.6 % |
@@ -40,7 +40,7 @@ Cible : > 80 % par objectif.
 
 ## Diversite
 
-- **Jaccard moyen sur 2 programmes consecutifs** : 0.787 -- cible < 0.5
+- **Jaccard moyen sur 2 programmes consecutifs** : 0.790 -- cible < 0.5
 - Plus l'indice est faible, plus les programmes sont varies.
 
 ## IoU rule-based vs ML
@@ -52,8 +52,8 @@ Voir `metrics/iou_heatmap.png`.
 
 ## Latence
 
-- **p50** : 187.6 ms -- cible < 200 ms
-- **p95** : 410.2 ms -- cible < 500 ms
+- **p50** : 195.7 ms -- cible < 200 ms
+- **p95** : 439.1 ms -- cible < 500 ms
 
 Mesure sur 120 appels in-process de `recommend_premium`.
 Voir `metrics/latency_boxplot.png`.
