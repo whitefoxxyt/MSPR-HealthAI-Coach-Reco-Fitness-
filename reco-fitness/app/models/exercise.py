@@ -8,6 +8,7 @@ class ExerciseORM(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    body_parts = Column(ARRAY(String), nullable=True, default=list)
     target_muscles = Column(ARRAY(String), nullable=False, default=list)
     # La colonne SQL s'appelle "equipments" (cf. MSPR-DB/migrations/V01__init_schema.sql).
     # On expose l'attribut Python `equipment` pour rester aligne avec le reste du code.

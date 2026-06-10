@@ -22,7 +22,12 @@ from app.schemas.recommendations import (
     RecommendationRequest,
     WorkoutProgramResponse,
 )
-from app.services import biometric_reader, exercise_catalog, fitness_profile_service
+from app.services import (
+    biometric_reader,
+    exercise_catalog,
+    feedback_service,
+    fitness_profile_service,
+)
 from app.services import workout_program_orchestrator as orchestrator
 from app.services.entitlements_client import get_entitlements
 from app.services.exercise_catalog import Exercise
@@ -87,6 +92,30 @@ def _read_biometrics(
     return biometric_reader.get_recent(user_id_int, pg_session)
 
 
+# Libelles francais affiches dans le nom genere du programme.
+_GOAL_LABELS_FR = {
+    "fat_loss": "perte de gras",
+    "muscle_strength": "force",
+    "endurance": "endurance",
+    "general_health": "santé générale",
+}
+_LEVEL_LABELS_FR = {
+    "beginner": "débutant",
+    "intermediate": "intermédiaire",
+    "advanced": "avancé",
+}
+
+
+def _program_name(profile, duration_weeks: int) -> str:
+    """Nom simple et generique : objectif, duree, niveau."""
+    goal = _GOAL_LABELS_FR.get(profile.health_goal_fitness.value, "personnalisé")
+    level = _LEVEL_LABELS_FR.get(profile.experience_level.value)
+    name = f"Programme {goal}, {duration_weeks} semaines"
+    if level:
+        name = f"{name}, niveau {level}"
+    return name
+
+
 def _exercise_to_schema(ex: Exercise) -> ExerciseInProgram:
     return ExerciseInProgram(
         id=ex.id,
@@ -144,7 +173,9 @@ async def post_recommendation(
     # Charge le catalogue via le cache exercise_catalog (lecture PG read-only).
     catalog = exercise_catalog.get_all(pg_session)
 
-    history: list = []
+    # Historique feedback reel : module le score novelty pour faire tourner
+    # les exercices deja proposes (surtout ceux mal notes).
+    history = await feedback_service.load_history(current_user.user_id, db)
 
     try:
         if entitlements.tier == "free":
@@ -173,6 +204,7 @@ async def post_recommendation(
     document = {
         "program_id": program_id,
         "user_id": current_user.user_id,
+        "name": _program_name(profile, program.duration_weeks),
         "duration_weeks": program.duration_weeks,
         "scoring_strategy": program.scoring_strategy,
         "tier_at_generation": entitlements.tier,

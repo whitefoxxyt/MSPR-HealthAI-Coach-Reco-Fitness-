@@ -24,6 +24,9 @@ class ExerciseInProgram(BaseModel):
 class WorkoutProgramResponse(BaseModel):
     program_id: str
     user_id: str
+    # Nom lisible genere a la creation (ex: "Programme force, 2 semaines,
+    # niveau avance"). Optionnel : les programmes anterieurs n'en ont pas.
+    name: str | None = None
     duration_weeks: int
     scoring_strategy: Literal["rule_based", "hybrid_rank_fusion"]
     tier_at_generation: Literal["free", "premium", "premium_plus"]

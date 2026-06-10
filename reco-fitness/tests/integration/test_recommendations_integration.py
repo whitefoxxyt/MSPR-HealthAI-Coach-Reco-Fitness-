@@ -68,12 +68,13 @@ def mongo_test_db():
 @pytest.fixture()
 def client(mongo_test_db):
     """Client FastAPI avec Mongo override + auth secret mock + exercise_catalog mock."""
+    from motor.motor_asyncio import AsyncIOMotorClient
+    from pymongo import MongoClient
+
     from app.db.session import get_db as get_pg_db
     from app.dependencies import get_db
     from app.main import app
     from app.services import exercise_catalog
-    from motor.motor_asyncio import AsyncIOMotorClient
-    from pymongo import MongoClient
 
     test_motor_client = AsyncIOMotorClient(mongo_test_db, tz_aware=True)
     test_db = test_motor_client["reco_fitness_test"]
@@ -330,3 +331,59 @@ class TestPostRecommendationsRateLimit:
 
             thirty_first = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
             assert thirty_first.status_code == 429, f"31eme appel : {thirty_first.text}"
+
+
+@pytest.mark.integration
+class TestProgramNameAndHistory:
+    def test_response_contains_generated_french_name(self, client, mock_auth_free):
+        c, test_db = client
+        user_id = "u-name-1"
+        _seed_profile(test_db, user_id)
+
+        response = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
+
+        assert response.status_code == 200, response.text
+        body = response.json()
+        # PROFILE_DOC : fat_loss + beginner, tier free -> 2 semaines.
+        assert body["name"] == "Programme perte de gras, 2 semaines, niveau débutant"
+        # Persiste a l'identique en Mongo pour l'historique.
+        doc = test_db["workout_programs"].find_one({"program_id": body["program_id"]})
+        assert doc["name"] == body["name"]
+
+    def test_feedback_history_is_loaded_for_scoring(self, client, mock_auth_free):
+        # Un feedback negatif recent fait strictement chuter le score de
+        # l'exercice (novelty ~0 x 1/5) : il est range dernier et sort de la
+        # semaine 1 (32 places pour 40 candidats). Sans chargement de
+        # l'historique, son score resterait a egalite avec les autres.
+        c, test_db = client
+        user_id = "u-history-1"
+        _seed_profile(test_db, user_id)
+
+        first = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
+        assert first.status_code == 200, first.text
+        first_ids = {
+            ex["id"]
+            for week in first.json()["weeks"]
+            for session in week
+            for ex in session
+        }
+        disliked = sorted(first_ids)[0]
+
+        test_db["recommendation_history"].insert_one({
+            "user_id": user_id,
+            "program_id": first.json()["program_id"],
+            "exercise_id": disliked,
+            "feedback_score": 1,
+            "completed": False,
+            "comment": "trop dur",
+            "created_at": datetime.now(timezone.utc),
+        })
+
+        second = c.post("/api/v1/recommendations", json={}, headers=_auth(user_id))
+        assert second.status_code == 200, second.text
+        week_one_ids = {
+            ex["id"] for session in second.json()["weeks"][0] for ex in session
+        }
+        assert disliked not in week_one_ids, (
+            "l'exercice note 1/5 a l'instant devrait sortir de la premiere semaine"
+        )

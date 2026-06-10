@@ -23,6 +23,9 @@ class Exercise:
     duration_seconds: int | None = None
     calories_per_minute: int | None = None
     gif_url: str | None = None
+    # Groupe corporel ExerciseDB (back, chest, upper legs...) : sert a diversifier
+    # les seances generees (round-robin par groupe dans l'orchestrateur).
+    body_parts: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -57,6 +60,7 @@ def _orm_to_dataclass(row: ExerciseORM) -> Exercise:
         duration_seconds=getattr(row, "duration_seconds", None),
         calories_per_minute=getattr(row, "calories_per_minute", None),
         gif_url=row.gif_url,
+        body_parts=getattr(row, "body_parts", None) or [],
     )
 
 

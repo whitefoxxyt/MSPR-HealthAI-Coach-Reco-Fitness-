@@ -1,5 +1,6 @@
 """Tests unitaires de l'orchestrateur de programmes d'entrainement (RF-10)."""
 import pytest
+
 from app.schemas.fitness_profile import (
     ExperienceLevel,
     FitnessProfileRequest,
@@ -112,6 +113,66 @@ class TestRecommendFree:
         )
 
 
+class TestDiversiteEtVariation:
+    def test_sessions_alternent_les_groupes_corporels(self):
+        # 3 groupes de 30 exercices a score identique : sans round-robin, une
+        # seance entiere sortirait du meme groupe (ordre catalogue).
+        catalog = []
+        for i, part in enumerate(["back", "chest", "upper legs"]):
+            for j in range(1, 31):
+                ex = _make_exercise(i * 100 + j, name=f"{part}-{j}")
+                ex.body_parts = [part]
+                catalog.append(ex)
+        profile = _profile(goal=HealthGoalFitness.fat_loss)
+
+        program = orchestrator.recommend_free(profile, history=[], catalog=catalog)
+
+        for week in program.weeks:
+            for session in week:
+                parts = {ex.body_parts[0] for ex in session}
+                assert parts == {"back", "chest", "upper legs"}, (
+                    f"seance mono-groupe : {parts}"
+                )
+
+    def test_regeneration_varie_quand_scores_egaux(self):
+        import random
+
+        catalog = [
+            _make_exercise(i, name=f"ex-{i}", category="cardio") for i in range(1, 81)
+        ]
+        profile = _profile(goal=HealthGoalFitness.fat_loss)
+
+        prog_a = orchestrator.recommend_free(
+            profile, history=[], catalog=catalog, rng=random.Random(1)
+        )
+        prog_b = orchestrator.recommend_free(
+            profile, history=[], catalog=catalog, rng=random.Random(2)
+        )
+
+        ids_a = [ex.id for week in prog_a.weeks for s in week for ex in s]
+        ids_b = [ex.id for week in prog_b.weeks for s in week for ex in s]
+        assert ids_a != ids_b, "deux regenerations identiques malgre des rng differents"
+
+    def test_meme_seed_reproduit_le_meme_programme(self):
+        import random
+
+        catalog = [
+            _make_exercise(i, name=f"ex-{i}", category="cardio") for i in range(1, 81)
+        ]
+        profile = _profile(goal=HealthGoalFitness.fat_loss)
+
+        prog_a = orchestrator.recommend_free(
+            profile, history=[], catalog=catalog, rng=random.Random(7)
+        )
+        prog_b = orchestrator.recommend_free(
+            profile, history=[], catalog=catalog, rng=random.Random(7)
+        )
+
+        ids_a = [ex.id for week in prog_a.weeks for s in week for ex in s]
+        ids_b = [ex.id for week in prog_b.weeks for s in week for ex in s]
+        assert ids_a == ids_b
+
+
 class TestEmptyCatalogAfterFiltering:
     def test_raises_empty_catalog_error_when_no_exercise_passes_filters(self):
         catalog = [
@@ -160,16 +221,14 @@ class TestRecommendPremium:
                 assert len(session) == 6
 
     def test_top_candidates_are_capped_at_twenty(self):
-        # Catalogue de 100 ex. La fusion Top-N=20 ne doit selectionner que parmi
-        # les 20 meilleurs de chaque strategie. On rend l'ex id=999 mauvais
-        # pour rule-based et bon pour ML (ml score eleve, mais filtres
-        # rule-based moyens) : il NE doit PAS apparaitre.
+        # Catalogue de 100 ex. La fusion Top-N=20 ne peut selectionner qu'au plus
+        # 40 exercices distincts (union des deux Top-20). Les scores rule-based
+        # sont tous identiques ici : les ex aequo sont departages aleatoirement,
+        # on verifie donc le cap, pas une liste precise.
         catalog = [
             _make_exercise(i, name=f"ex-{i}", category="strength", difficulty="intermediate")
             for i in range(1, 101)
         ]
-        # Cible : on ne verifie pas un id specifique mais que tous les ex
-        # selectionnes sont issus du Top-20 de l'une des 2 listes.
         profile = _profile(
             goal=HealthGoalFitness.muscle_strength,
             level=ExperienceLevel.intermediate,
@@ -177,23 +236,14 @@ class TestRecommendPremium:
 
         program = orchestrator.recommend_premium(profile, history=[], catalog=catalog)
 
-        # Reconstitue les deux Top-20 utilises par la fusion
-        from app.services.scoring_rule_based import score_exercise as rb
-        from app.services.workout_program_orchestrator import score_ml
-
-        top_rb = {
-            ex.id for ex in sorted(catalog, key=lambda e: rb(e, profile, []), reverse=True)[:20]
-        }
-        top_ml = {
-            ex.id for ex in sorted(catalog, key=lambda e: score_ml(e, profile), reverse=True)[:20]
-        }
-        union_top = top_rb | top_ml
-
         chosen_ids = {
             ex.id for week in program.weeks for session in week for ex in session
         }
-        assert chosen_ids.issubset(union_top), (
-            f"exercices hors Top-20 selectionnes : {chosen_ids - union_top}"
+        catalog_ids = {ex.id for ex in catalog}
+        assert chosen_ids.issubset(catalog_ids)
+        assert len(chosen_ids) <= 2 * orchestrator._TOP_N_CANDIDATES, (
+            f"{len(chosen_ids)} exercices distincts, cap attendu a "
+            f"{2 * orchestrator._TOP_N_CANDIDATES}"
         )
 
 

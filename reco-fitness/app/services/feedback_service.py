@@ -4,8 +4,37 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from app.services.scoring_rule_based import Recommendation
+
 PROGRAMS_COLLECTION = "workout_programs"
 HISTORY_COLLECTION = "recommendation_history"
+_HISTORY_SCORING_LIMIT = 200
+
+
+async def load_history(
+    user_id: str, db: AsyncIOMotorDatabase, limit: int = _HISTORY_SCORING_LIMIT
+) -> list[Recommendation]:
+    """
+    Feedbacks exercice-level recents de l'utilisateur, convertis pour le
+    scoring novelty_and_feedback_score. Les feedbacks program-level
+    (exercise_id=None) sont ignores : ils ne ciblent aucun exercice.
+    """
+    cursor = (
+        db[HISTORY_COLLECTION]
+        .find({"user_id": user_id, "exercise_id": {"$ne": None}})
+        .sort("created_at", -1)
+        .limit(limit)
+    )
+    history: list[Recommendation] = []
+    async for doc in cursor:
+        history.append(
+            Recommendation(
+                exercise_id=doc["exercise_id"],
+                feedback_score=doc.get("feedback_score"),
+                created_at=doc["created_at"],
+            )
+        )
+    return history
 
 
 async def record_feedback(

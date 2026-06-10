@@ -6,6 +6,8 @@ et structure la liste d'exercices selectionnes en semaines / seances / exercices
 """
 from __future__ import annotations
 
+import random
+from collections import deque
 from dataclasses import dataclass
 from typing import Literal
 
@@ -50,6 +52,48 @@ class EmptyCatalogError(ValueError):
     """Aucun exercice ne passe les filtres durs (limitations / equipement)."""
 
 
+def _shuffled(items: list[Exercise], rng: random.Random | None) -> list[Exercise]:
+    """
+    Copie melangee de la liste : le tri stable qui suit conserve l'ordre des
+    scores mais randomise les ex aequo. Sans cela, les nombreux exercices a
+    score identique sortent toujours dans l'ordre de la table PG et chaque
+    regeneration produit un programme strictement identique.
+    """
+    copy = list(items)
+    (rng or random.Random()).shuffle(copy)
+    return copy
+
+
+def _primary_group(exercise: Exercise) -> str:
+    if exercise.body_parts:
+        return exercise.body_parts[0]
+    if exercise.target_muscles:
+        return exercise.target_muscles[0]
+    return "autre"
+
+
+def _interleave_by_group(ranked: list[Exercise]) -> list[Exercise]:
+    """
+    Alterne les groupes corporels (round-robin) en preservant l'ordre de score
+    interne a chaque groupe : evite les seances mono-muscle quand le haut du
+    classement est domine par un seul groupe.
+    """
+    buckets: dict[str, deque[Exercise]] = {}
+    order: list[str] = []
+    for ex in ranked:
+        key = _primary_group(ex)
+        if key not in buckets:
+            buckets[key] = deque()
+            order.append(key)
+        buckets[key].append(ex)
+    result: list[Exercise] = []
+    while len(result) < len(ranked):
+        for key in order:
+            if buckets[key]:
+                result.append(buckets[key].popleft())
+    return result
+
+
 def _structure_program(
     ranked: list[Exercise],
     duration_weeks: int,
@@ -62,6 +106,7 @@ def _structure_program(
         raise EmptyCatalogError(
             "Aucun exercice eligible apres filtrage : limitations ou equipement trop restrictifs."
         )
+    ranked = _interleave_by_group(ranked)
     needed_per_week = sessions_per_week * exercises_per_session
     weeks: list[list[list[Exercise]]] = []
     for w in range(duration_weeks):
@@ -126,12 +171,13 @@ def recommend_free(
     profile: FitnessProfileRequest,
     history: list[Recommendation],
     catalog: list[Exercise],
+    rng: random.Random | None = None,
 ) -> WorkoutProgram:
     """Tier free : scoring rule-based seul, programme de 2 semaines."""
     sessions_per_week, exercises_per_session, _ = _shape_for(profile.health_goal_fitness)
     eligible = [ex for ex in catalog if passes_hard_filters(ex, profile)]
     ranked = sorted(
-        eligible,
+        _shuffled(eligible, rng),
         key=lambda ex: score_rule_based(ex, profile, history),
         reverse=True,
     )
@@ -148,9 +194,12 @@ def _hybrid_ranked(
     profile: FitnessProfileRequest,
     history: list[Recommendation],
     catalog: list[Exercise],
+    rng: random.Random | None = None,
 ) -> list[Exercise]:
     """Top-N rule-based ∪ Top-N ML, fusionnes par rang (filtre dur applique en amont)."""
-    eligible = [ex for ex in catalog if passes_hard_filters(ex, profile)]
+    eligible = _shuffled(
+        [ex for ex in catalog if passes_hard_filters(ex, profile)], rng
+    )
     top_rule_based = sorted(
         eligible,
         key=lambda ex: score_rule_based(ex, profile, history),
@@ -168,6 +217,7 @@ def recommend_premium(
     profile: FitnessProfileRequest,
     history: list[Recommendation],
     catalog: list[Exercise],
+    rng: random.Random | None = None,
 ) -> WorkoutProgram:
     """
     Tier premium : fusion Top-N rule-based + ML, duree pleine selon goal,
@@ -177,7 +227,7 @@ def recommend_premium(
         profile.health_goal_fitness
     )
     return _structure_program(
-        ranked=_hybrid_ranked(profile, history, catalog),
+        ranked=_hybrid_ranked(profile, history, catalog, rng),
         duration_weeks=duration_weeks,
         sessions_per_week=sessions_per_week,
         exercises_per_session=exercises_per_session,
@@ -205,6 +255,7 @@ def recommend_premium_plus(
     history: list[Recommendation],
     catalog: list[Exercise],
     biometrics: Biometric | None,
+    rng: random.Random | None = None,
 ) -> WorkoutProgram:
     """
     Tier premium_plus : meme moteur que premium, enrichi d'un ajustement de la
@@ -219,7 +270,7 @@ def recommend_premium_plus(
         base_sessions + _sessions_adjustment(biometrics),
     )
     return _structure_program(
-        ranked=_hybrid_ranked(profile, history, catalog),
+        ranked=_hybrid_ranked(profile, history, catalog, rng),
         duration_weeks=duration_weeks,
         sessions_per_week=sessions_per_week,
         exercises_per_session=exercises_per_session,
