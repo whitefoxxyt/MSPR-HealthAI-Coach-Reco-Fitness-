@@ -86,6 +86,13 @@ API_V1_PREFIX = "/api/v1"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Opt-in (deploiement) : l'image n'embarque pas scoring_model.pkl, on
+    # l'entraine au demarrage. Desactive par defaut pour ne pas ralentir les
+    # tests (TestClient declenche le lifespan) ni le dev local.
+    if os.getenv("SCORING_AUTOTRAIN", "0").strip().lower() in {"1", "true", "yes"}:
+        from app.services.scoring_bootstrap import ensure_scoring_model
+
+        ensure_scoring_model()
     yield
     close_mongo()
 
