@@ -3,3 +3,9 @@ target-version = "py312"
 
 [lint]
 select = ["E", "F", "I"]
+
+[lint.isort]
+# La CI lance ruff depuis la racine du repo (chemins reco-fitness/...) : sans
+# cette declaration, "app" n'est pas detecte comme first-party et l'ordre des
+# imports attendu differe de celui calcule depuis reco-fitness/.
+known-first-party = ["app"]
