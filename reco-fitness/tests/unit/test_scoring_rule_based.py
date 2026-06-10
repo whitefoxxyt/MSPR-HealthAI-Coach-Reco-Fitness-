@@ -237,3 +237,28 @@ class TestScoreExercise:
         s_safe = score_exercise(ex, _make_profile(limitations=[]), [])
         s_blocked = score_exercise(ex, _make_profile(limitations=["lower_back"]), [])
         assert s_blocked < s_safe
+
+
+class TestEquipmentMatchBodyWeight:
+    def test_body_weight_compte_comme_aucun_equipement(self):
+        exercise = Exercise(
+            id=1,
+            name="push up",
+            target_muscles=["pectorals"],
+            equipment=["body weight"],
+            difficulty="beginner",
+        )
+
+        assert equipment_match(exercise, []) == 1.0
+
+    def test_equipement_reel_reste_exige(self):
+        exercise = Exercise(
+            id=2,
+            name="bench press",
+            target_muscles=["pectorals"],
+            equipment=["barbell"],
+            difficulty="intermediate",
+        )
+
+        assert equipment_match(exercise, []) == 0.0
+        assert equipment_match(exercise, ["barbell"]) == 1.0

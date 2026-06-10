@@ -37,9 +37,14 @@ def goal_match(exercise: Exercise, health_goal: HealthGoalFitness) -> float:
     return affinity.get(exercise.category, _DEFAULT_AFFINITY)
 
 
+# "body weight" n'est pas un equipement a posseder : un exercice au poids du
+# corps est toujours realisable, comme un exercice sans equipement ("none").
+NO_EQUIPMENT_NEEDED = {"none", "body weight"}
+
+
 def equipment_match(exercise: Exercise, user_equipment: list[str]) -> float:
     """Ratio d'equipement requis par l'exercice effectivement possede par l'utilisateur."""
-    required = [e for e in exercise.equipment if e != "none"]
+    required = [e for e in exercise.equipment if e not in NO_EQUIPMENT_NEEDED]
     if not required:
         return 1.0
     owned = set(user_equipment)

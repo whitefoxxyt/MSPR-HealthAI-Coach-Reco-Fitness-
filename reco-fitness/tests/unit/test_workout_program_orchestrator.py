@@ -173,6 +173,51 @@ class TestDiversiteEtVariation:
         assert ids_a == ids_b
 
 
+class TestFiltresEquipementEtLimitations:
+    def test_poids_du_corps_accessible_sans_equipement(self):
+        # Avant : "body weight" etait exige comme equipement possede, un profil
+        # sans materiel recevait un 409 alors que 372 exercices au poids du
+        # corps existent.
+        catalog = [
+            _make_exercise(i, name=f"pdc-{i}", equipment=["body weight"])
+            for i in range(1, 41)
+        ]
+        profile = _profile(equipment=[])
+
+        program = orchestrator.recommend_free(profile, history=[], catalog=catalog)
+
+        assert program.weeks, "programme vide pour un profil sans equipement"
+
+    def test_limitation_genou_filtre_les_muscles_associes(self):
+        bad = [
+            _make_exercise(i, name=f"jambes-{i}", target_muscles=["quads"])
+            for i in range(1, 31)
+        ]
+        good = [
+            _make_exercise(i + 100, name=f"haut-{i}", target_muscles=["pectorals"])
+            for i in range(1, 31)
+        ]
+        profile = _profile(limitations=["knee"])
+
+        program = orchestrator.recommend_free(profile, history=[], catalog=bad + good)
+
+        chosen = {ex.id for week in program.weeks for s in week for ex in s}
+        assert chosen.isdisjoint({ex.id for ex in bad}), (
+            "limitation knee : des exercices quads sont passes"
+        )
+
+    def test_synonymes_band_et_resistance_band(self):
+        catalog = [
+            _make_exercise(i, name=f"rb-{i}", equipment=["resistance band"])
+            for i in range(1, 41)
+        ]
+        profile = _profile(equipment=["band"])
+
+        program = orchestrator.recommend_free(profile, history=[], catalog=catalog)
+
+        assert program.weeks, "posseder band doit donner acces a resistance band"
+
+
 class TestEmptyCatalogAfterFiltering:
     def test_raises_empty_catalog_error_when_no_exercise_passes_filters(self):
         catalog = [

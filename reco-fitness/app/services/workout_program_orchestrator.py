@@ -15,7 +15,7 @@ from app.schemas.fitness_profile import FitnessProfileRequest, HealthGoalFitness
 from app.services.biometric_reader import Biometric
 from app.services.exercise_catalog import Exercise
 from app.services.scoring_ml import score_exercise as score_ml
-from app.services.scoring_rule_based import Recommendation
+from app.services.scoring_rule_based import NO_EQUIPMENT_NEEDED, Recommendation
 from app.services.scoring_rule_based import score_exercise as score_rule_based
 
 ScoringStrategy = Literal["rule_based", "hybrid_rank_fusion"]
@@ -127,6 +127,50 @@ def _structure_program(
     )
 
 
+# Le profil exprime les limitations en articulations (vocabulaire du front),
+# le catalogue en muscles cibles ExerciseDB : sans ce mapping, une limitation
+# "knee" ne filtrait strictement rien.
+_LIMITATION_MUSCLES: dict[str, list[str]] = {
+    "knee": ["quads", "hamstrings", "calves", "abductors", "adductors", "glutes"],
+    "back": ["spine", "upper back", "lats", "traps", "levator scapulae"],
+    "shoulder": ["delts", "serratus anterior"],
+    "wrist": ["forearms"],
+    "ankle": ["calves"],
+    "hip": ["glutes", "abductors", "adductors", "hamstrings"],
+}
+
+# Le catalogue ExerciseDB distingue "band" et "resistance band" : posseder
+# l'un donne acces aux exercices de l'autre.
+_EQUIPMENT_SYNONYMS: dict[str, list[str]] = {
+    "band": ["resistance band"],
+    "resistance band": ["band"],
+}
+
+
+def _expand_limitations(limitations: list[str]) -> list[str]:
+    expanded = list(limitations)
+    for lim in limitations:
+        expanded.extend(_LIMITATION_MUSCLES.get(lim, []))
+    return sorted(set(expanded))
+
+
+def _expand_equipment(equipment: list[str]) -> list[str]:
+    expanded = list(equipment)
+    for item in equipment:
+        expanded.extend(_EQUIPMENT_SYNONYMS.get(item, []))
+    return sorted(set(expanded))
+
+
+def prepare_profile(profile: FitnessProfileRequest) -> FitnessProfileRequest:
+    """Profil normalise pour le scoring : limitations en muscles, synonymes d'equipement."""
+    return profile.model_copy(
+        update={
+            "limitations": _expand_limitations(profile.limitations),
+            "equipment": _expand_equipment(profile.equipment),
+        }
+    )
+
+
 def passes_hard_filters(exercise: Exercise, profile: FitnessProfileRequest) -> bool:
     """Ecarte un exercice qui touche une limitation ou requiert un equipement absent."""
     limitations = set(profile.limitations)
@@ -134,7 +178,7 @@ def passes_hard_filters(exercise: Exercise, profile: FitnessProfileRequest) -> b
         return False
     if exercise.category and exercise.category in limitations:
         return False
-    required = [e for e in exercise.equipment if e != "none"]
+    required = [e for e in exercise.equipment if e not in NO_EQUIPMENT_NEEDED]
     owned = set(profile.equipment)
     if required and not all(item in owned for item in required):
         return False
@@ -174,6 +218,7 @@ def recommend_free(
     rng: random.Random | None = None,
 ) -> WorkoutProgram:
     """Tier free : scoring rule-based seul, programme de 2 semaines."""
+    profile = prepare_profile(profile)
     sessions_per_week, exercises_per_session, _ = _shape_for(profile.health_goal_fitness)
     eligible = [ex for ex in catalog if passes_hard_filters(ex, profile)]
     ranked = sorted(
@@ -197,6 +242,7 @@ def _hybrid_ranked(
     rng: random.Random | None = None,
 ) -> list[Exercise]:
     """Top-N rule-based ∪ Top-N ML, fusionnes par rang (filtre dur applique en amont)."""
+    profile = prepare_profile(profile)
     eligible = _shuffled(
         [ex for ex in catalog if passes_hard_filters(ex, profile)], rng
     )
