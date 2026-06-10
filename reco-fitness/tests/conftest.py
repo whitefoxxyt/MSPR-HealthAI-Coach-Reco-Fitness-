@@ -38,8 +38,9 @@ def pg_container():
     Necessite Docker. Marque tes tests @pytest.mark.integration pour les isoler.
     """
     try:
-        from app.db.session import Base
         from testcontainers.postgres import PostgresContainer
+
+        from app.db.session import Base
 
         with PostgresContainer("postgres:16-alpine") as pg:
             engine = create_engine(pg.get_connection_url())
@@ -58,9 +59,10 @@ def mongo_container():
     Necessite Docker. Marque tes tests @pytest.mark.integration pour les isoler.
     """
     try:
-        from app.db.init_mongo import init_mongo
         from pymongo import MongoClient
         from testcontainers.mongodb import MongoDbContainer
+
+        from app.db.init_mongo import init_mongo
 
         with MongoDbContainer("mongo:7-jammy") as mongo:
             url = mongo.get_connection_url()

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+
 from app.schemas.fitness_profile import (
     ExperienceLevel,
     FitnessProfileRequest,

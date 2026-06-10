@@ -2,6 +2,7 @@ import math
 from datetime import datetime, timedelta, timezone
 
 import pytest
+
 from app.schemas.fitness_profile import (
     ExperienceLevel,
     FitnessProfileRequest,

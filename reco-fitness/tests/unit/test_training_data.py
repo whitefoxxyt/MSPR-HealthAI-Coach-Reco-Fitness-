@@ -3,6 +3,7 @@ from collections import Counter
 from pathlib import Path
 
 import pandas as pd
+
 from app.schemas.fitness_profile import (
     ExperienceLevel,
     FitnessProfileRequest,

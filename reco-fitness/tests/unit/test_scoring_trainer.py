@@ -4,10 +4,11 @@ from pathlib import Path
 
 import joblib
 import pytest
+from sklearn.ensemble import RandomForestRegressor
+
 from app.services.exercise_catalog import Exercise
 from app.services.scoring_trainer import train_and_persist
 from app.services.training_data import build_dataset
-from sklearn.ensemble import RandomForestRegressor
 
 
 def _mini_catalog(n: int = 6) -> list[Exercise]:

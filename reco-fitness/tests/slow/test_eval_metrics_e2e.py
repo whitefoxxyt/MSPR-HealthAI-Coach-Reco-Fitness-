@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from app.services import eval_metrics
 from app.services.exercise_catalog import Exercise
 

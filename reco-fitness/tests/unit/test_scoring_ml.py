@@ -3,6 +3,8 @@ from pathlib import Path
 
 import joblib
 import pytest
+from sklearn.ensemble import RandomForestRegressor
+
 from app.schemas.fitness_profile import (
     ExperienceLevel,
     FitnessProfileRequest,
@@ -12,7 +14,6 @@ from app.schemas.fitness_profile import (
 from app.services import scoring_ml
 from app.services.exercise_catalog import Exercise
 from app.services.training_data import build_dataset, derive_vocab
-from sklearn.ensemble import RandomForestRegressor
 
 
 @pytest.fixture(autouse=True)
@@ -131,6 +132,7 @@ class TestEncodingConsistentWithTraining:
         """Les features extraites pour l'inference doivent etre identiques a celles
         produites par encode_pair (au label/exercise_id pres)."""
         import joblib
+
         from app.services.training_data import encode_pair
 
         bundle = joblib.load(trained_model_path)

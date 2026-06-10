@@ -3,6 +3,7 @@ import statistics
 import time
 
 import pytest
+
 from app.schemas.fitness_profile import (
     ExperienceLevel,
     FitnessProfileRequest,
